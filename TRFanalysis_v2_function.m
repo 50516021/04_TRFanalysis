@@ -20,7 +20,7 @@ function model = TRFanalysis_v2_function(indGen, indCol, indNum, indSNR, indSPt)
 clearvars -except indGen indCol indNum indSNR indSPt
 close all;
 
-% indGen=1; indCol=3; indNum=3; indSNR=2; indSPt=2;
+% indGen=1; indCol=1; indNum=1; indSNR=1; indSPt=1;
 %% parameters
 
 fsEEG=256; %sampling rate for EEG
@@ -31,12 +31,11 @@ targetdur  = 2.8;  %target duration (sec)
 baselinedur= 0.3;  %duration of baseline (sec)
 
 %%% file names
-name = 'test20230118_Hwan'; %subject (experiment) name
-datafolder =  ['../02_EEGanalysis/subject/Subj_' name '/']; %name of the folder containing the subject's data 
-outfolder =  ['subject/Subj_' name '/']; %name of the folder containing the subject's data 
-fnameMsk = strcat(datafolder, 'step3_epochs_Msk_', name, '_ICAprocessedAfterRejections.mat'); %Masker based epoched EEG data file name with its path
+name = 's03_20230317_comptest_Katsu'; %subject (experiment) name
+datafolder =  ['../02_EEGanalysis/subject/' name '/']; %name of the folder containing the subject's data 
+outfolder =  sprintf('subject/%s/', name); %name of the output folder containing the subject's data 
 fnameTgt = strcat(datafolder, 'step3_epochs_Tgt_', name, '_ICAprocessedAfterRejections.mat'); %Target based epoched EEG data file name with its path
-titlename = strrep(name, '_', ' '); %name for figure title (replased '_' to blank)
+
 
 if ~exist(outfolder, 'dir') %check folder existance
     mkdir(outfolder)
@@ -83,23 +82,13 @@ target = strcat(string((indGen-1)*4), '000', string(indCol-1), '0', string(indNu
 
 %% load data
 
-%%% behavioral data
-load(sprintf('%sres.mat',datafolder)); %participant's responces
+%%% get behavioral data
+resfile = ls([datafolder '/res*']);
+load(resfile(1:end-1)); %participant's responces
+tgArray= table2array(res(:,12)); %Hwan-112:end, SY-19:160, Minoru-1:113
 
 %%% EEG data
 load(fnameTgt, 'GdTr_final', 'epochs_Gd') %load Target based EEG
-
-% Normalize data
-indx = find(res.StimulusCharactor==target); %index of particular target
-
-co = 1; %counter
-clear indxTemp;
-for i = 1: length(indx)
-    if res.SNR(indx(i))==SNR && res.SpatialPosition(indx(i))==Spat %index of particular SNR & Spat           
-        indxTemp(co) = indx(i);
-        co = co +1;
-    end
-end
 
 %% EEG channel configuration (device detection by the number of channel)
 NumCh = size(epochs_Gd,2);
@@ -116,6 +105,19 @@ end
 Chls    = cellstr(locs.labels); %channel name array
 
 %% determine trial index
+
+% Normalize data
+indx = find(res.StimulusCharactor==target); %index of particular target
+
+co = 1; %counter
+clear indxTemp;
+for i = 1: length(indx)
+    if res.SNR(indx(i))==SNR && res.SpatialPosition(indx(i))==Spat %index of particular SNR & Spat           
+        indxTemp(co) = indx(i);
+        co = co +1;
+    end
+end
+
 var = 'no'; %variation
 if ~any(GdTr_final==indxTemp) %check the existance of the GoodTrial
     var = 'no data'; %variation - there are no eligible trials
@@ -128,9 +130,11 @@ if ~any(GdTr_final==indxTemp) %check the existance of the GoodTrial
     return; %exit
 else 
 %     prompt = 'Choose Trial Index:';  % prompt message
+    co = 1; %counter
     for i=1:size(indxTemp,2)
         if any(GdTr_final==indxTemp(i))
-            indxFinalMat(i) = find(GdTr_final==indxTemp(i));
+            indxFinalMat(co) = find(GdTr_final==indxTemp(i));
+            co = co +1;
         end
     end
      %     [indFind,tf] = listdlg('PromptString',prompt,'SelectionMode','single','ListSize',[150 100],'ListString',string(indxFinal)); % option selection window
