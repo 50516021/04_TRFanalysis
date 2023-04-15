@@ -31,7 +31,7 @@ targetdur  = 2.8;  %target duration (sec)
 baselinedur= 0.3;  %duration of baseline (sec)
 
 %%% file names
-name = 's03_20230317_comptest_Katsu'; %subject (experiment) name
+name = 's05_20230319_comptest_Katsu'; %subject (experiment) name
 datafolder =  ['../02_EEGanalysis/subject/' name '/']; %name of the folder containing the subject's data 
 outfolder =  sprintf('subject/%s/', name); %name of the output folder containing the subject's data 
 fnameTgt = strcat(datafolder, 'step3_epochs_Tgt_', name, '_ICAprocessedAfterRejections.mat'); %Target based epoched EEG data file name with its path
