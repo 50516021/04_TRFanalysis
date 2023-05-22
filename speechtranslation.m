@@ -45,3 +45,21 @@ for i = 1:16
 end
 
 % speechSpectrogram = mean(reshape(abs(speechAnalytic),[],8),2);
+
+%% speech sound plot
+
+fs = 48000;
+t = 0: 1/fs : 2.8-1/fs; %sample to second conversion
+plot(t, stimulus(1:2.8*fs,1)'); hold on;
+%     ylim([-yscale yscale]); 
+%     xlim([-baselinedur shorteststs]); 
+
+l1 = line([0;0], get(gca, 'ylim')); l1.Color = [0 1 0]; hold on;
+l2 = line([1;1], get(gca, 'ylim')); l2.Color = [0 0 1]; hold on;
+l3 = line([2.1;2.1], get(gca, 'ylim')); l3.Color = [1 0 1];
+title(sprintf('Speech Example'));
+legend([l1, l2, l3], {'Ready', 'color', 'number'});
+xlabel('time[s]');  
+ylabel('Magnitude');  
+
+
