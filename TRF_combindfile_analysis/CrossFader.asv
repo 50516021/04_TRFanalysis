@@ -1,0 +1,28 @@
+% CrossFader
+% - cross-fade for two files with fs sampling rate and L 
+%
+% required Add-ons
+% - 
+% - 
+% required functions
+% - 
+% required setting files
+% - 
+
+% v1  
+% 06/13/2023 
+
+
+function model = CrossFader(wave1, wave2, Lover, fs)
+
+n = 200;
+
+W = linspace(1,0,n)';                                    %'
+
+S1(end-n+1:end) = S1(end-n+1:end).*W;
+S2(1:n) = S2(1:n).*(1-W);
+
+S12 = zeros(size(S1,1) + size(S2,1) - n, 1);
+S12(1:size(S1,1)) = S1;
+S12(end-size(S1,1)+1:end) = S12(end-size(S1,1)+1:end) + S2;
+

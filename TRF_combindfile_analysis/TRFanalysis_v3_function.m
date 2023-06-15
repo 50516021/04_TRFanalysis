@@ -1,0 +1,74 @@
+%%% TRFanalysis_v3_function %%% 
+%%% - analyse EEG data by refering wav files for function (for any waves)
+%%%
+%%% required Add-ons
+%%% - mTRF Toolbox
+%%% - 
+%%% required functions
+%%% - speechtranslation_v2.m
+%%% required setting files
+%%% - 
+
+%%% v1  
+%%% 02/20/2023 using proccessed data (after step3 of EEG analysis)
+%%% v2 
+%%% 03/22/2023 accurate timing syncronization (using behavioral data)
+
+
+function model = TRFanalysis_v3_function(EEG, soundwave, fsEEG, fsSound, fsmTRF)
+
+
+% indGen=1; indCol=1; indNum=1; indSNR=1; indSPt=1;
+%% parameters
+
+% fsEEG=256; %sampling rate for EEG
+% fsSound=48000; %sampling rate for the sound
+% fsmTRF=256; %sampling rate for mTRF
+
+targetdur  = 2.8;  %target duration (sec)
+baselinedur= 0.3;  %duration of baseline (sec)
+
+
+%% EEG data
+resp = resample(double(EEG),fsmTRF,fsEEG); %extract data and resample
+
+%% speech data
+disp('!!! translating the sound');
+speechSpectrogram = speechtranslation_v2(soundwave, fsSound); 
+disp('!!! translation done');
+    
+stim=resample(speechSpectrogram, fsmTRF, fsSound); %resample data
+factor = 524.288/2^24;
+
+%% mTRF train
+%   following variables:
+%       'stim'      a vector containing the speech spectrogram, obtained by
+%                   band-pass filtering the speech signal into 128
+%                   logarithmically spaced frequency bands between 100
+%                   and 4000Hz, taking the Hilbert transform at each band
+%                   and averaging over every 8 neighbouring bands.
+%       'resp'      a matrix containing 2 minutes of 128-channel EEG data
+%                   filtered between 0.5 and 15 Hertz
+%       'fs'        the sample rate of STIM and RESP (128Hz)
+%       'factor'    the BioSemi EEG normalization factor for computing the
+%                   STRF in microvolts (524.288mV / 2^24bits)
+
+% Model hyperparameters
+tmin = -100;
+tmax = 400;
+lambda = 0.5;
+
+% Compute model weights
+% Note, ridge regression is used instead of Tikhonov regularization to
+% avoid cross-channel leakage of the multivariate input features
+%%% mTRFtrain(STIM,RESP,FS,DIR,TMIN,TMAX,LAMBDA) %%%
+model = mTRFtrain(stim,resp*factor,256,1,tmin,tmax,lambda,'method','ridge',...
+    'split',5,'zeropad',0);
+
+% TRFanalysis_StimReconst_v1(stim, resp, fsmTRF);
+    
+
+
+
+
+

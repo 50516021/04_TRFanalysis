@@ -1,5 +1,5 @@
 %%% TRFanalysis_v2_function %%% 
-%%% - analyse EEG data by refering wav files for function
+%%% - analyse EEG data by refering wav files for function (for single trials)
 %%%
 %%% required Add-ons
 %%% - mTRF Toolbox
@@ -10,7 +10,7 @@
 %%% - 
 
 %%% v1  
-%%% 02/20/2023 using proccessed daat (after step3 of EEG analysis)
+%%% 02/20/2023 using proccessed data (after step3 of EEG analysis)
 %%% v2 
 %%% 03/22/2023 accurate timing syncronization (using behavioral data)
 
@@ -23,7 +23,7 @@ close all;
 % indGen=1; indCol=1; indNum=1; indSNR=1; indSPt=1;
 %% parameters
 
-fsEEG=256; %sampling rate for EEG
+fsEEG=256; %sampling rate for EEG (already resampled)
 fsSound=48000; %sampling rate for the sound
 fsmTRF=256; %sampling rate for mTRF
 
