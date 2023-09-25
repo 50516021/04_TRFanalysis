@@ -38,12 +38,12 @@ mkdir(outfolder_mTRFmdl)
 
 %%% get filenames
 EEGfile = ls([outfolder, 'step4_*']); %find responce file
-EEGfile = EEGfile(1:end-1); %extract unnecessary charactar
-load(EEGfile); %participant's responces
+% EEGfile = EEGfile(1:end-1); %extract unnecessary charactar
+load([outfolder EEGfile]); %participant's responces
 
 %%% get meta data (stimuli info)
 metadata_file = ls([outfolder '/metadata*']);
-load(metadata_file(1:end-1)); %participant's responces
+load([outfolder metadata_file]); %participant's responces
 
 %% stimulus preparation
 
@@ -55,27 +55,34 @@ stimulidur = timerange_Tgt(2) - timerange_Tgt(1);
 
 stim_tag = ["Target", "Masker", "Mixed"]; 
 % stim_dur = [5*60 10*60 stimulidur]; %stimuli extraction duration [sec] 
-stim_dur = [5*60 10*60 stimulidur];
+stim_dur = [155];
 
 %%% chanel info
 chs = ["Fz", "Cz"];
+% chs = ["Fz"];
 
 %%% stimuli info
 
 fs_Sound = 48000;
+for i =1:size(stimulus,2)
+    disp('### begin stimuli conversion ###')
+    stim(:,:,i) = StimTrans_mTRF_v1(stimulus(1:155*fs_Sound,i), fs_Sound);
+    disp('### conversion done ###')
+end
+
+filename_stim = strcat(outfolder_mTRFfig, 'stim_', experiment_name, '.mat');
+save(filename_stim,'stim');
+
+%% mTRf processing
 
 for i = 1:length(stim_dur)
-    stimulus_ext = stimulus(1:stim_dur(i)*fs_Sound,:);
+    stim_ext = stim(1:stim_dur(i)*fs_Sound,:,:);
     EEG = saveEp(1:stim_dur(i)*fs_EEG,:);
     for j =1:size(stimulus,2)
-
-        disp('### begin stimuli conversion ###')
-        stim = StimTrans_mTRF_v1(stimulus_ext(:,j), fs_Sound);
-        disp('### conversion done ###')
         
         %%% mTRF estimation
         for k = 1:length(chs)
-            model = TRFestimation_v1(stim, fs_Sound, EEG, fs_EEG, k);
+            model = TRFestimation_v1(stim_ext(:,:,j), fs_Sound, EEG, fs_EEG, k);
             
             sgtitle(sprintf('mTRF stimulus: %s, duration:%0.0f s, %s ', stim_tag(j), stim_dur(i), chs(k)))
             filename = sprintf('mTRF_%s_%0.0fs_%s', stim_tag(j), stim_dur(i), chs(k));
