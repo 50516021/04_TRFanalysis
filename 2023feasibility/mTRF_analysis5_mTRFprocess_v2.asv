@@ -1,0 +1,124 @@
+%%% Spatial Attention EEG analysis for BDF/EDF/CSV - step 4 %%% 
+%%% - evoked responce
+%%%
+%%% required Add-ons
+%%% - 
+%%% - 
+%%% required functions
+%%% - makestimulus_mTRF_v1.m
+%%% - StimTrans_mTRF_v1.m
+%%% - TRFestimation_v1.m
+%%%
+%%% required setting files
+%%% - 
+
+%%% v1  
+%%% 20230921 experiment 'experiment_mTRF_feasibility_v1.m'
+%%% v2
+%%% 20230923 experiment 'experiment_mTRF_feasibility_v2.m'
+%%%     NEXT -> step5
+
+clearvars; 
+close all;
+
+addpath('../'); %add path above
+addpath('../../02_EEGanalysis'); %add path of EEGanalysis
+
+%% parameters
+%%%get folder name
+folders = struct2table(dir('subject/s*'));
+prompt = 'Choose folder name:';  % prompt message
+[foldInd,tf] = listdlg('PromptString',prompt,'SelectionMode','single','ListSize',[400 750],'ListString',folders.name); % option selection window
+experiment_name = folders.name{foldInd,:}; %subject (experiment) name
+outfolder =  sprintf('subject/%s/', experiment_name); %name of the output folder containing the subject's data 
+outfolder_mTRFfig = strcat(outfolder, 'mTRF_fig/');
+mkdir(outfolder_mTRFfig)
+outfolder_mTRFmdl = strcat(outfolder, 'mTRF_mdl/');
+mkdir(outfolder_mTRFmdl)
+
+%%% get filenames
+EEGfile = ls([outfolder, 'step4_*']); %find responce file
+EEGfile = EEGfile(1:end-1); %extract unnecessary charactar
+load(EEGfile); %participant's responces
+
+%%% get meta data (stimuli info)
+metadata_file = ls([outfolder '/metadata*']);
+load(metadata_file(1:end-1)); %participant's responces
+
+%% stimulus preparation
+
+stimulus = stimGen(path_Tgt, timerange_Tgt, path_Msk, timerange_Msk);
+stimulus(:,3) = stimulus(:,1) + stimulus(:,2); %mixed stimulus
+stimulidur = timerange_Tgt(2) - timerange_Tgt(1);
+
+%% data preparation
+
+stim_tag = ["Target", "Masker", "Mixed"]; 
+% stim_dur = [5*60 10*60 stimulidur]; %stimuli extraction duration [sec] 
+stim_dur = [5*60 10*60 stimulidur];
+
+%%% chanel info
+chs = ["Fz", "Cz"];
+
+%%% stimuli info
+
+fs_Sound = 48000;
+
+for i = 1:length(stim_dur)
+    stimulus_ext = stimulus(1:stim_dur(i)*fs_Sound,:);
+    EEG = saveEp(1:stim_dur(i)*fs_EEG,:);
+    for j =1:size(stimulus,2)
+
+        disp('### begin stimuli conversion ###')
+        stim = StimTrans_mTRF_v1(stimulus_ext(:,j), fs_Sound);
+        disp('### conversion done ###')
+        
+        %%% mTRF estimation
+        for k = 1:length(chs)
+            model = TRFestimation_v1(stim, fs_Sound, EEG, fs_EEG, k);
+            
+            sgtitle(sprintf('mTRF stimulus: %s, duration:%0.0f s, %s ', stim_tag(j), stim_dur(i), chs(k)))
+            filename = sprintf('mTRF_%s_%0.0fs_%s', stim_tag(j), stim_dur(i), chs(k));
+            filename_pdf = strcat(outfolder_mTRFfig, filename, '.pdf');
+            filename_mdl = strcat(outfolder_mTRFmdl, 'model_', filename, '.mat');
+            saveas(gcf, filename_pdf)
+            save(filename_mdl,'model');
+            disp(strcat(filename, ' has been saved'))
+
+        end    
+    end
+end
+
+%% stimulus preparation function %%%
+function stimulus = stimGen(path_Tgt, timerange_Tgt, path_Msk, timerange_Msk)
+
+    d_fifo = 10; %duration of fadein/fadeout (ms)
+    
+    disp('preparing stimuli')
+    [wavTgt_raw, fs_t] = audioread(path_Tgt); % read Target file
+    [wavMsk_raw, fs_m] = audioread(path_Msk); % read Masker file
+    
+    dur_Tgt = timerange_Tgt(2) - timerange_Tgt(1);
+    dur_Msk = timerange_Msk(2) - timerange_Msk(1);
+    
+    if dur_Tgt < dur_Msk
+        wavTgt = wavTgt_raw(timerange_Tgt(1)*fs_t+1 : timerange_Tgt(2)*fs_t);
+        wavMsk = wavMsk_raw(timerange_Msk(1)*fs_t+1 : (timerange_Msk(1)+dur_Tgt)*fs_t);
+    else
+        wavTgt = wavTgt_raw(timerange_Tgt(1)*fs_t+1 : timerange_Tgt(2)*fs_t);
+        wavMsk = [wavMsk_raw(timerange_Msk(1)*fs_t+1 : timerange_Msk(2)*fs_t), ...
+                    wavMsk_raw(timerange_Msk(1)+1 : (timerange_Msk(1)+dur_Tgt - dur_Msk)*fs_t)];
+    end
+    
+    %%% S/N configuration %%%
+    SNR = 0;
+    L = rms(wavMsk) * 10^(SNR/20)/ rms(wavTgt); %SNR = 20*log10(rms(target)/rms(masker))
+    wavTgt = L* wavTgt; 
+    
+    wavTgt = fadein(d_fifo, wavTgt, fs_t);
+    stimulus(:,1) = fadeout(d_fifo, wavTgt, fs_t);
+    wavMsk = fadein(d_fifo, wavMsk, fs_t);
+    stimulus(:,2) = fadeout(d_fifo, wavMsk, fs_t);
+    
+    disp('finish stimuli preparation')
+end
