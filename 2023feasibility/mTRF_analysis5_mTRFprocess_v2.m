@@ -16,7 +16,7 @@
 %%% 20230921 experiment 'experiment_mTRF_feasibility_v1.m'
 %%% v2
 %%% 20230923 experiment 'experiment_mTRF_feasibility_v2.m'
-%%%     NEXT -> step5
+%%%     
 
 clearvars; 
 close all;

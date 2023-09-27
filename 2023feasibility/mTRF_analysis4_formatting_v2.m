@@ -83,7 +83,7 @@ saveEp = plotEp;
 fs_EEG = fs;
 date = datestr(now,'yyyymmdd');
 save_filename = strcat(outfolder, 'step4_plotdata_', date, '_',  experiment_name, '.mat');
-save(save_filename,'saveEp','fs_EEG');
+save(save_filename,'saveEp', 'epochs', 'fs_EEG');
 disp(strcat(save_filename, ' has been saved'))
 
 

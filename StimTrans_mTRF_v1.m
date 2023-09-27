@@ -29,8 +29,8 @@ freqRange = [100 4000];
 numFilters = 128;
 filterBank = gammatoneFilterBank('SampleRate',fs,'NumFilters',numFilters,'FrequencyRange',freqRange);
 
-if length(sound) > 3e+07 %long sound data 
-    chunk_size = (3e+07)/50;
+if length(sound) > 3e+06 %long sound data 
+    chunk_size = (3e+06)/50;
     chunk_co = fix(length(sound)/chunk_size); %chunk count
     soundAnalytic = [];
 
