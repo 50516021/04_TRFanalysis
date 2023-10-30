@@ -38,12 +38,15 @@ mkdir(outfolder_mTRFmdl)
 
 %%% get filenames
 EEGfile = ls([outfolder, 'step4_*']); %find responce file
-% EEGfile = EEGfile(1:end-1); %extract unnecessary charactar
-load([outfolder EEGfile]); %participant's responces
+EEGfile = EEGfile(1:end-1); %extract unnecessary charactar
+% load([outfolder EEGfile]); %participant's responces
+load([EEGfile]); %participant's responces
 
 %%% get meta data (stimuli info)
 metadata_file = ls([outfolder '/metadata*']);
-load([outfolder metadata_file]); %participant's responces
+metadata_file = metadata_file(1:end-1); %extract unnecessary charactar
+% load([outfolder metadata_file]); %participant's responces
+load([metadata_file]); %participant's responces
 
 %% stimulus preparation
 
@@ -64,14 +67,19 @@ chs = ["Fz", "Cz"];
 %%% stimuli info
 
 fs_Sound = 48000;
+fs_Sound_down = 8000; %consider the frequency range of speech 
+
+stimulus_down = resample(stimulus(1:stim_dur*fs_Sound,:),fs_Sound_down,fs_Sound);
+
 for i =1:size(stimulus,2)
     disp('### begin stimuli conversion ###')
-    stim(:,:,i) = StimTrans_mTRF_v1(stimulus(1:155*fs_Sound,i), fs_Sound);
+    stim(:,:,i) = StimTrans_mTRF_v1(stimulus_down(:,i), fs_Sound_down);
     disp('### conversion done ###')
 end
 
 filename_stim = strcat(outfolder_mTRFfig, 'stim_', experiment_name, '.mat');
 save(filename_stim,'stim');
+
 
 %% mTRf processing
 

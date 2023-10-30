@@ -15,10 +15,13 @@
 %%% v2
 %%% 20230923 experiment 'experiment_mTRF_feasibility_v2.m'
 %%%     NEXT -> step4
+%%% 20231010 OS flex
 
 addpath('../');
 addpath('../../02_EEGanalysis'); %add path of EEGanalysis
 addpath('../../02_EEGanalysis/eeglab2023.0'); %add path of EEGLAB
+
+OSflag = OSdetection_v1;
 
 %% parameter
 
@@ -76,9 +79,17 @@ end
 
 filepath = strcat(datadir{dev}, experiment_name, '/');
 metadata_file = ls([filepath, 'metadata*']); %find metadata (stimuli info) file
-metadata_file = metadata_file(1:end-1); %extract unnecessary charactar
-load(metadata_file); 
-save([outfolder extractAfter(metadata_file, filepath)],'path_Tgt', 'timerange_Tgt', 'path_Msk', 'timerange_Msk'); %copy metadata file 
+
+if OSflag(1) == "1" %Mac
+    metadata_file = metadata_file(1:end-1); %extract unnecessary charactar
+    load(metadata_file); 
+    save([outfolder extractAfter(metadata_file, filepath)],'path_Tgt', 'timerange_Tgt', 'path_Msk', 'timerange_Msk'); %copy metadata file 
+
+elseif OSflag(1) == "2" %Windows
+    load([filepath metadata_file]); 
+    save([outfolder metadata_file],'path_Tgt', 'timerange_Tgt', 'path_Msk', 'timerange_Msk'); %copy metadata file 
+
+end
 
 %% load EEG data 
 %%% Biosemi (BDF) %%%
@@ -150,7 +161,11 @@ streamdur_epoch = fix(fsOgnl*(baselinedur+streamdur))+1; %data stream duration
 epochs    = zeros(fix(fs*(baselinedur+streamdur))+1,numCh,numTrial); %epochs(EEG signal, channel, trial)
 
 for k = 1:numTrial
-    temp = eeg(stimOnsets(k)-fix(fsOgnl*baselinedur)+1 : stimOnsets(k)+fix(fsOgnl*streamdur),:); %EEG data region following masker onset triggers
+    % if stimOnsets(k)+fix(fsOgnl*streamdur) < size(eeg,1)
+        temp = eeg(stimOnsets(k)-fix(fsOgnl*baselinedur)+1 : stimOnsets(k)+fix(fsOgnl*streamdur),:); %EEG data region following masker onset triggers
+    % else
+    %     temp = eeg(stimOnsets(k)-fix(fsOgnl*baselinedur)+1 : stimOnsets(k)+fix(fsOgnl*(streamdur-40)),:);
+    % end
     temp = temp - repmat(mean(temp(baseline,:)),size(temp,1),1); %subtract baseline
     epochs(:,:,k) = resample(temp,fs,fsOgnl);     %subtracted epoch
 end

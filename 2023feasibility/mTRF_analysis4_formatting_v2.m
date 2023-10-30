@@ -13,9 +13,11 @@
 %%% 20230920 experiment 'experiment_mTRF_feasibility_v1.m'
 %%% v2
 %%% 20230923 experiment 'experiment_mTRF_feasibility_v2.m'
+%%% 20231010 OS flex
 
 clearvars; close all;
-% pname = 'R:\06_Tutorials\EEGanalysisWorkshop2022\example_ISNT';
+
+OSflag = OSdetection_v1;
 
 %% parameters
 %%%get folder name
@@ -25,14 +27,27 @@ prompt = 'Chose folder name:';  % prompt message
 experiment_name = folders.name{foldInd,:}; %subject (experiment) name
 outfolder =  sprintf('subject/%s/', experiment_name); %name of the output folder containing the subject's data 
 
-%%% get filenames
-EEGfile = ls([outfolder, 'step1_*']); %find responce file
-EEGfile = EEGfile(1:end-1); %extract unnecessary charactar
-load(EEGfile); %load EEG
+if OSflag(1) == "1"
+    %%% get filenames
+    EEGfile = ls([outfolder, 'step1_*']); %find responce file
+    EEGfile = EEGfile(1:end-1); %extract unnecessary charactar
+    load(EEGfile); %participant's responces
+    
+    %%% get meta data (stimuli info)
+    metadata_file = ls([outfolder '/metadata*']);
+    metadata_file = metadata_file(1:end-1); %extract unnecessary charactar
+    load(metadata_file); %participant's responces
 
-%%% get meta data (stimuli info)
-metadata_file = ls([outfolder '/metadata*']);
-load(metadata_file(1:end-1)); %participant's responces
+elseif OSflag(1) == "2"
+    %%% get filenames
+    EEGfile = ls([outfolder, 'step1_*']); %find responce file
+    load([outfolder EEGfile]); %participant's responces
+    
+    %%% get meta data (stimuli info)
+    metadata_file = ls([outfolder '/metadata*']);
+    load([outfolder metadata_file]); %participant's responces
+end
+
 stimulidur = timerange_Tgt(2) - timerange_Tgt(1);
 
 % filter settings

@@ -1,4 +1,4 @@
-%%% mTRF analysis - step 5 stimuli reconstraction %%% 
+%%% mTRF analysis - step 5a stimuli reconstraction %%% 
 %%% - reconstract stimiuli from EEG
 %%% - based on https://github.com/mickcrosse/mTRF-Toolbox/blob/master/examples/stimulus_reconstruction.m
 %%%

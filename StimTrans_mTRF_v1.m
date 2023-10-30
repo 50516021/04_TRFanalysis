@@ -39,9 +39,10 @@ if length(sound) > 3e+06 %long sound data
         soundAnalytic = [soundAnalytic; hilbert(soundFiltered)];
         fprintf('filtering %d/%d done \n', i, chunk_co)
     end
-    soundFiltered = filterBank(sound(chunk_size*i+1:end));
-    soundAnalytic = [soundAnalytic; hilbert(soundFiltered)];
-
+    if chunk_size*chunk_co ~= length(sound)
+        soundFiltered = filterBank(sound(chunk_size*i+1:end));
+        soundAnalytic = [soundAnalytic; hilbert(soundFiltered)];
+    end
 else
     soundFiltered = filterBank(sound);
     soundAnalytic = hilbert(soundFiltered);
