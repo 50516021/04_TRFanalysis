@@ -24,50 +24,49 @@ addpath('../../02_EEGanalysis'); %add path of EEGanalysis
 
 OSflag = OSdetection_v1;
 
-%% parameters
+%% folder structure
 %%%get folder name
 folders = struct2table(dir('subject/s*'));
 prompt = 'Choose folder name:';  % prompt message
 [foldInd,tf] = listdlg('PromptString',prompt,'SelectionMode','single','ListSize',[400 750],'ListString',folders.name); % option selection window
 experiment_name = folders.name{foldInd,:}; %subject (experiment) name
 outfolder =  sprintf('subject/%s/', experiment_name); %name of the output folder containing the subject's data 
-outfolder_mTRFfig_step6 = strcat(outfolder, 'mTRF_fig/step6/');
+outfolder_mTRFfig_step6 = strcat(outfolder, 'mTRF_fig/step6/timeslice/');
 mkdir(outfolder_mTRFfig_step6)
 outfolder_mTRFmdl = strcat(outfolder, 'mTRF_mdl/');
 mkdir(outfolder_mTRFmdl)
 
-if OSflag(1) == "1"
-    %%% get filenames
-    EEGfile = ls([outfolder, 'step4_*']); %find responce file
-    EEGfile = EEGfile(1:end-1); %extract unnecessary charactar
-    load(EEGfile); %participant's responces
-    
-    %%% get meta data (stimuli info)
-    metadata_file = ls([outfolder '/metadata*']);
-    metadata_file = metadata_file(1:end-1); %extract unnecessary charactar
-    load(metadata_file); %participant's responces
+% if OSflag(1) == "1"
+%     %%% get filenames
+%     EEGfile = ls([outfolder, 'step4_*']); %find responce file
+%     EEGfile = EEGfile(1:end-1); %extract unnecessary charactar
+%     load(EEGfile); %participant's responces
+% 
+%     %%% get meta data (stimuli info)
+%     metadata_file = ls([outfolder '/metadata*']);
+%     metadata_file = metadata_file(1:end-1); %extract unnecessary charactar
+%     load(metadata_file); %participant's responces
+% 
+% elseif OSflag(1) == "2"
+%     %%% get filenames
+%     EEGfile = ls([outfolder, 'step4_*']); %find responce file
+%     load([outfolder EEGfile]); %participant's responces
+% 
+%     %%% get meta data (stimuli info)
+%     metadata_file = ls([outfolder '/metadata*']);
+%     load([outfolder metadata_file]); %participant's responces
+% end
 
-elseif OSflag(1) == "2"
-    %%% get filenames
-    EEGfile = ls([outfolder, 'step4_*']); %find responce file
-    load([outfolder EEGfile]); %participant's responces
-    
-    %%% get meta data (stimuli info)
-    metadata_file = ls([outfolder '/metadata*']);
-    load([outfolder metadata_file]); %participant's responces
-end
+%% parameters
+stim_tag = ["Target", "Masker", "Mixed"]; 
+stim_dur = [1 2 3 4 5 6 7 8 9]*60; %duration for analysis
+stim_dur_load = 10*60; %loading stimuli duration
+slice_step = 1*60; %step of slice (sec)
+MaxStep = 10*60; %maximum duration of slice (sec)
 
+chs = ["Fz", "Cz"];
 
 %% data preparation
-
-stim_tag = ["Target", "Masker", "Mixed"]; 
-stim_dur = [1 2 3 4 5 6 7 8 9 10]*60; %duration for analysis
-stim_dur_load = 10*60; %loading stimuli duration
-slice_slice = 1*60; %step of slice (sec)
-
-%%% chanel info
-chs = ["Fz", "Cz"];
-% chs = ["Fz"];
 
 %%% make legend array for stimuli
 for i = 1:length(stim_dur)
@@ -79,41 +78,45 @@ end
 
 numStimtag = size(stim_tag,2);
 numStimdur = length(stim_dur);
+plotPat = ["-", "--", ".-", ":"]; %plot pattern
 
 
 for j =1: numStimtag
     for k = 1:length(chs)
         for i = 1:numStimdur
-            %%% load model
-                filename = sprintf('mTRF_%s_%0.0fs_%s', stim_tag(j), stim_dur(i), chs(k));
+            numSlice(i) = (MaxStep-stim_dur(i))/slice_step+1; %number of slice
+
+            figure;
+            sgtitle(sprintf('Speech TRF stimulus: %s,  %s - %ds ', stim_tag(j), chs(k), stim_dur(i)/60))
+            
+            for l = 1:numSlice(i)
+                %%% load model
+                filename = sprintf('mTRF_%s_%0.0fs_%s_slice%02.f', stim_tag(j), stim_dur(i), chs(k), l);
                 filename_mdl = strcat(outfolder_mTRFmdl, 'model_', filename, '.mat');
                 load(filename_mdl);
                 disp(strcat(filename, ' has been loaded'))
 
-            for l = 1:10/(stim_dur(i)/60)
-                figure;
-                sgtitle(sprintf('Speech TRF stimulus: %s,  %s - %ds ', stim_tag(j), chs(k), stim_dur(i)/60))
-
-
                 [x, y] = mTRFplot_pros(model,'trf','all',k,[-50,350]);
-                if i < numStimdur/4;       plot(x, y, '-'); hold on;
-                elseif i < numStimdur*2/4; plot(x, y, '--'); hold on;
-                elseif i < numStimdur*3/4; plot(x, y, ':'); hold on;
-                else;                      plot(x, y, '.-'); hold on;
+                if l < numSlice(i)/4;       plot(x, y, plotPat(1)); hold on;
+                elseif l < numSlice(i)*2/4; plot(x, y, plotPat(2)); hold on;
+                elseif l < numSlice(i)*3/4; plot(x, y, plotPat(3)); hold on;
+                else;                       plot(x, y, plotPat(4)); hold on;
                 end
-                SNR_TRF(i,k,j) = max(y)/rms(y);
-                %index: SNR_TRF(stimuli duration, channel, stimuli tag)
+                SNR_TRF(l,i,k,j) = max(y)/rms(y);
+                %index: SNR_TRF(slice, stimuli duration, channel, stimuli tag)
+
+                stim_slice_leg(i,l) = strcat("start: ", sprintf('%d sec', (l-1)*60)); %legend of slices (starting point)
 
             end
             
             colororder(parula(numStimdur)); %color gradation
-            legend(stim_dur_leg)
+            legend(stim_slice_leg(i,1:numSlice))
             xlim([-50,350])
             ylim([(-1.5)*10^(-3), (1.5)*10^(-3)])
             xlabel('Time lag (ms)')
             ylabel('Amplitude (a.u.)')
             grid on;
-            filename_pdf = strcat(outfolder_mTRFfig_step6, sprintf('TRF_%s_%s', stim_tag(j), chs(k)), '.pdf');
+            filename_pdf = strcat(outfolder_mTRFfig_step6, sprintf('TRF_%s_%ds_%s', stim_tag(j), stim_dur(i), chs(k)), '.pdf');
             saveas(gcf, filename_pdf)
 
         end
@@ -123,31 +126,33 @@ end
 
 %% SNR figures
 
-co  = 0;
-figure;
-
-for j =1: numStimtag
-    for k = 1:length(chs)
-        co = co + 1;
-        plot(squeeze(SNR_TRF(:,k,j))); hold on;
-        leg_SNR(co) = string(sprintf('%s, %s', stim_tag(j), chs(k)));        
+for i = 1:numStimdur
+    co  = 0;
+    figure;
+    for j =1: numStimtag
+        for k = 1:length(chs)
+            co = co + 1;
+            plot(squeeze(SNR_TRF(1:numSlice(i),i,k,j)), plotPat(j)); hold on;
+            leg_SNR(co) = string(sprintf('%s, %s', stim_tag(j), chs(k)));   
+        end
     end 
+
+    legend(leg_SNR)
+    xticks(1:numSlice(i))
+    xticklabels(string(((1:numSlice(i))-1)*60))
+    xlabel('start point [sec]');
+    ylabel('SNR between RMS and Maximum value of TRF');
+    grid on;
+    sgtitle(sprintf('SNR of Speech TRF stimulus (%ds) %s', stim_dur(i), experiment_name))
+    filename_pdf = strcat(outfolder_mTRFfig_step6, sprintf('SNR_%s_%ds', experiment_name, stim_dur(i)), '.pdf');
+    saveas(gcf, filename_pdf)
+
 end
 
-legend(leg_SNR)
-xticks(1:numStimdur)
-xticklabels(stim_dur_lbl)
-xlabel('duration [min]');
-ylabel('SNR between RMS and Maximum value of TRF');
-grid on;
-sgtitle(sprintf('SNR of Speech TRF stimulus %s', experiment_name))
-filename_pdf = strcat(outfolder_mTRFfig_step6, sprintf('SNR_%s', experiment_name), '.pdf');
-saveas(gcf, filename_pdf)
-
-%% save SNR data 
-
-filename_data = strcat(outfolder, sprintf('step6_SNR_%s', experiment_name), '.mat');
-save(filename_data, 'SNR_TRF')
+% %% save SNR data 
+% 
+% filename_data = strcat(outfolder, sprintf('step6_SNR_%s', experiment_name), '.mat');
+% save(filename_data, 'SNR_TRF')
 
 %% mTRF processing for plot function
 function [x, y] = mTRFplot_pros(model,type,feat,chan,xlims,avgfeat,avgchan)
