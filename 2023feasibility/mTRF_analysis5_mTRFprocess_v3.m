@@ -17,6 +17,7 @@
 %%% 20230923 experiment 'experiment_mTRF_feasibility_v2.m'
 %%% v3
 %%% 20230927 for signal qualities
+%%% 20231129 nonsub - raw data
 
 clearvars; 
 close all;

@@ -1,5 +1,5 @@
 %%% mTRF analysis - step 6 mTRF SNR comparison %%% 
-%%% - evoked responce
+%%% - time slice
 %%%
 %%% required Add-ons
 %%% - 
@@ -149,10 +149,11 @@ for i = 1:numStimdur
 
 end
 
-% %% save SNR data 
-% 
-% filename_data = strcat(outfolder, sprintf('step6_SNR_%s', experiment_name), '.mat');
-% save(filename_data, 'SNR_TRF')
+%% save SNR data 
+
+filename_data = strcat(outfolder, sprintf('step6_SNR_timeslice_%s', experiment_name), '.mat');
+save(filename_data, 'SNR_TRF')
+fprintf('%s has been saved \n', filename_data)
 
 %% mTRF processing for plot function
 function [x, y] = mTRFplot_pros(model,type,feat,chan,xlims,avgfeat,avgchan)

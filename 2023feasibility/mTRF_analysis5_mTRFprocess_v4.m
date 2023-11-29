@@ -1,5 +1,5 @@
 %%% mTRF analysis - step 5 mTRF model generation for various stimuli length v4 - slice%%% 
-%%% - 
+%%% - generate mTRF model
 %%%
 %%% required Add-ons
 %%% - 
@@ -29,7 +29,7 @@ addpath('../'); %add path above
 addpath('../../02_EEGanalysis'); %add path of EEGanalysis
 
 OSflag = OSdetection_v1;
-%%%% Be Careful about sampling rate of sound atimuli
+%%%% Be Careful about sampling rate of sound stimuli
 
 %% load data
 %%%get folder name
@@ -110,6 +110,7 @@ end
 
 %%% chanel info
 chs = ["Fz", "Cz"];
+numch = [];
 
 resp = epochs(1:stim_dur*fs_EEG,:);
 
@@ -121,7 +122,7 @@ for i = 1:length(stim_dur)
     numSlice = (MaxStep-stim_dur(i))/slice_step+1; %number of slice
     for l = 1:numSlice
     stim_ext = resample(stim(1+slice_step*(l-1)*fs_Sound_down:stim_dur(i)*fs_Sound_down+slice_step*(l-1)*fs_Sound_down,:,:), fs_New, fs_Sound_down);
-    EEG = resample(saveEp(1+slice_step*(l-1)*fs_EEG:stim_dur(i)*fs_EEG+slice_step*(l-1)*fs_EEG,:), fs_New, fs_EEG);
+    EEG = resample(epochs(1+slice_step*(l-1)*fs_EEG:stim_dur(i)*fs_EEG+slice_step*(l-1)*fs_EEG,:), fs_New, fs_EEG);
         for j =1:size(stim,3)
             
             %%% mTRF estimation

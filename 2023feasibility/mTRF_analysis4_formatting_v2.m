@@ -14,6 +14,7 @@
 %%% v2
 %%% 20230923 experiment 'experiment_mTRF_feasibility_v2.m'
 %%% 20231010 OS flex
+%%% 20231129 also for v4
 
 clearvars; close all;
 

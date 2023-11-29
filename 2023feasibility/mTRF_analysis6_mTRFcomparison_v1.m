@@ -1,5 +1,5 @@
 %%% mTRF analysis - step 6 mTRF SNR comparison %%% 
-%%% - evoked responce
+%%% - SNRs
 %%%
 %%% required Add-ons
 %%% - 
@@ -109,7 +109,6 @@ for j =1: numStimtag
 
     end          
 end
-
 
 %% SNR figures
 

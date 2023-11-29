@@ -50,11 +50,10 @@ for i = 1:Snum
     filenames{i} = foldTemp;
 
     % load SNR data
-    SNRfile = ls(strcat(foldTemp, 'step6_*')); %find responce file
+    SNRfile = ls(strcat(foldTemp, 'step6_SNR_s*')); %find responce file
     if OSflag(1) == "1"   
         SNRfile = SNRfile(1:end-1); %extract unnecessary charactar
-        SNRdata(i,:,:,:) = struct2array(load(SNRfile)); %SNR data
-    
+        SNRdata(i,:,:,:) = struct2array(load(SNRfile)); %SNR data   
     elseif OSflag(1) == "2"
         SNRdata(i,:,:,:) = struct2array(load([foldTemp SNRfile])); %SNR data
     end
@@ -107,8 +106,7 @@ for i = 1:numCh
     SNR_tbl_temp = SNR_tbl(SNR_tbl.Channel == chs(i),:);
     SNR_tbl_temp.StimDur = categorical(SNR_tbl_temp.StimDur,stim_dur_lbl);
     boxchart(SNR_tbl_temp.StimDur,SNR_tbl_temp.SNR,'GroupByColor',SNR_tbl_temp.Variation); hold on;
-    for j = 1:numTag
-        
+    for j = 1:numTag  
         plot(squeeze(SNRdata_mean(:,i,j)),'-o', 'Color',cols(j));    hold on; %average lines
         leg_SNR(j) = string(sprintf('%s, %s', stim_tag(j), chs(i)));  
     end

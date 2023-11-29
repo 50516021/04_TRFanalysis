@@ -16,6 +16,7 @@
 %%% 20230923 experiment 'experiment_mTRF_feasibility_v2.m'
 %%%     NEXT -> step4
 %%% 20231010 OS flex
+%%% 20231115 also for v3
 
 addpath('../');
 addpath('../../02_EEGanalysis'); %add path of EEGanalysis
@@ -170,6 +171,6 @@ for k = 1:numTrial
     epochs(:,:,k) = resample(temp,fs,fsOgnl);     %subtracted epoch
 end
 
-epochs = epochs(fs*baselinedur+1:end,:,:);
+epochs = epochs(fs*baselinedur+1:end,:,:); %extract after onset
 save([outfolder 'step1_' experiment_name '.mat'],'epochs','t','fs');
 
