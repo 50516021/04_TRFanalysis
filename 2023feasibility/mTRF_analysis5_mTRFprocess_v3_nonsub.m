@@ -34,9 +34,9 @@ prompt = 'Choose folder name:';  % prompt message
 [foldInd,tf] = listdlg('PromptString',prompt,'SelectionMode','single','ListSize',[400 750],'ListString',folders.name); % option selection window
 experiment_name = folders.name{foldInd,:}; %subject (experiment) name
 outfolder =  sprintf('subject/%s/', experiment_name); %name of the output folder containing the subject's data 
-outfolder_mTRFfig = strcat(outfolder, 'mTRF_fig/');
+outfolder_mTRFfig = strcat(outfolder, 'mTRF_fig_nonsub/');
 mkdir(outfolder_mTRFfig)
-outfolder_mTRFmdl = strcat(outfolder, 'mTRF_mdl/');
+outfolder_mTRFmdl = strcat(outfolder, 'mTRF_mdl_nonsub/');
 mkdir(outfolder_mTRFmdl)
 
 if OSflag(1) == "1" %Mac
@@ -116,7 +116,7 @@ for i = 1:length(stim_dur)
         
         %%% mTRF estimation
         for k = 1:length(chs)
-            model = TRFestimation_v1(stim_ext(:,:,j), fs_New, resp, fs_New, k);
+            model = TRFestimation_v1(stim_ext(:,:,j), fs_New, resp, fs_New, 0);
             
             sgtitle(sprintf('mTRF stimulus: %s, duration:%0.0f s, %s ', stim_tag(j), stim_dur(i), chs(k)))
             filename = sprintf('mTRF_%s_%0.0fs_%s', stim_tag(j), stim_dur(i), chs(k));

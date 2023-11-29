@@ -126,7 +126,7 @@ for i = 1:length(stim_dur)
             
             %%% mTRF estimation
             for k = 1:length(chs)
-                model = TRFestimation_v1(stim_ext(:,:,j), fs_New, resp, fs_New, k);
+                model = TRFestimation_v1(stim_ext(:,:,j), fs_New, resp, fs_New, numch(k));
                 
                 sgtitle(sprintf('mTRF stimulus: %s, duration:%0.0fs, %s, slice%02.f ', stim_tag(j), stim_dur(i), chs(k), l))
                 filename = sprintf('mTRF_%s_%0.0fs_%s_slice%02.f', stim_tag(j), stim_dur(i), chs(k), l);
