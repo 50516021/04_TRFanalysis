@@ -71,24 +71,26 @@ SNRdata_mean  =  squeeze(mean(SNRdata, 1)); %mean for all participants
 
 %%% make the table for box plot
 co = 0;
-for i = 1:numCh
-    for j = 1:numTag
-        for l = 1:Snum
-            co = co + 1;
-            
-            Channel(co) = chs(i);
-            StimTag(co) = stim_tag(j);
-            Vari(co)    = string(sprintf('%s, %s', stim_tag(j), chs(i))); 
-            subj(co)    = subList.ID(l);
-            SNR(co)     = SNRdata(l,k,i,j) ;
-           
+for k = 1:numInst
+    for i = 1:numCh
+        for j = 1:numTag
+            for l = 1:Snum
+                co = co + 1;
+                
+                Inst(co) = string(stim_dur_lbl(k));
+                Channel(co) = chs(i);
+                StimTag(co) = stim_tag(j);
+                Vari(co)    = string(sprintf('%s, %s', stim_tag(j), chs(i))); 
+                subj(co)    = subList.ID(l);
+                SNR(co)     = SNRdata(l,k,i,j) ;
+               
+            end
         end
     end
 end
 
-
-SNR_tbl = table(StimDur', Channel', StimTag', Vari', subj', SNR');
-SNR_tbl.Properties.VariableNames = ["StimDur", "Channel", "StimTag", "Variation", "subject", "SNR"];
+SNR_tbl = table(Inst', Channel', StimTag', Vari', subj', SNR');
+SNR_tbl.Properties.VariableNames = ["Instruction", "Channel", "StimTag", "Variation", "subject", "SNR"];
 
 %% draw figures 
 
@@ -99,9 +101,9 @@ for i = 1:numCh
     figure;
         
     SNR_tbl_temp = SNR_tbl(SNR_tbl.Channel == chs(i),:);
-    SNR_tbl_temp.StimDur = categorical(SNR_tbl_temp.StimDur,stim_dur_lbl);
+    SNR_tbl_temp.Instruction = categorical(SNR_tbl_temp.Instruction,instruction);
     groupdata = reordercats(categorical(SNR_tbl_temp.StimTag), stim_tag);
-    boxchart(SNR_tbl_temp.StimDur,SNR_tbl_temp.SNR,'GroupByColor',groupdata); hold on;
+    boxchart(SNR_tbl_temp.Instruction,SNR_tbl_temp.SNR,'GroupByColor',groupdata); hold on;
 
     for j = 1:numTag  
         plot(squeeze(SNRdata_mean(:,i,j)),'-o', 'Color',cols(j));    hold on; %average lines
