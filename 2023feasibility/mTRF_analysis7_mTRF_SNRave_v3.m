@@ -25,7 +25,7 @@ addpath('../'); %add path above
 OSflag = OSdetection_v1;
 figurepath = "figure/";
 
-stim_tag    = ["Target", "Masker", "Mixed"]; 
+stim_tag = ["Left", "Right", "Mixed"];
 numTag      = length(stim_tag);
 chs         = ["Fz", "Cz"];
 numCh       = length(chs);
@@ -59,7 +59,7 @@ for i = 1:Snum
     elseif OSflag(1) == "2"
         SNRdata(i,:,:,:) = struct2array(load([foldTemp SNRfile])); %SNR data
     end
-    %index:SNRdata(subject, stimuli duration, channel, stimuli tag)
+    %index:SNRdata(subject, channel, stimuli tag, instruction)
 
 end
 
@@ -77,12 +77,12 @@ for k = 1:numInst
             for l = 1:Snum
                 co = co + 1;
                 
-                Inst(co) = string(stim_dur_lbl(k));
+                Inst(co) = string(instruction(k));
                 Channel(co) = chs(i);
                 StimTag(co) = stim_tag(j);
                 Vari(co)    = string(sprintf('%s, %s', stim_tag(j), chs(i))); 
                 subj(co)    = subList.ID(l);
-                SNR(co)     = SNRdata(l,k,i,j) ;
+                SNR(co)     = SNRdata(l,i,j,k) ;
                
             end
         end
@@ -106,14 +106,14 @@ for i = 1:numCh
     boxchart(SNR_tbl_temp.Instruction,SNR_tbl_temp.SNR,'GroupByColor',groupdata); hold on;
 
     for j = 1:numTag  
-        plot(squeeze(SNRdata_mean(:,i,j)),'-o', 'Color',cols(j));    hold on; %average lines
+        plot(squeeze(SNRdata_mean(i,j,:)),'-o', 'Color',cols(j));    hold on; %average lines
         leg_SNR(j) = string(sprintf('%s, %s', stim_tag(j), chs(i)));  
     end
 
     sgtitle(strcat('Average of TRF SNR:', chs(i), ' (N=', string(Snum), ')'))
     legend([leg_SNR leg_SNR],'Location','northwest')
     ylim(yrange)
-    xlabel('duration [min]');
+    xlabel('instruction');
     ylabel('SNR between RMS and Maximum value of TRF');
     grid on;
     hold off;
