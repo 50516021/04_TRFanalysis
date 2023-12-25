@@ -1,5 +1,6 @@
 %%% mTRF analysis - step 5 mTRF model generation for various stimuli length - nonsub -> use raw data of all the cannels %%% 
-%%% - evoked responce, use all channels
+%%% - evoked responce, use all channels, two instructions version
+%%% - lambda optimization
 %%%
 %%% required Add-ons
 %%% - 
@@ -16,8 +17,11 @@
 %%% v2
 %%% 20230923 experiment 'experiment_mTRF_feasibility_v2.m'
 %%% v3
-%%% 20230927 for signal qualities
+%%% 20230927 for signal qualities   
 %%% 20231129 nonsub - raw data
+%%% v4
+%%% 20231207 two instructions 'experiment_mTRF_feasibility_v4.m'
+%%% 20231213 lambda optimization
 
 clearvars; 
 close all;
@@ -34,9 +38,9 @@ prompt = 'Choose folder name:';  % prompt message
 [foldInd,tf] = listdlg('PromptString',prompt,'SelectionMode','single','ListSize',[400 750],'ListString',folders.name); % option selection window
 experiment_name = folders.name{foldInd,:}; %subject (experiment) name
 outfolder =  sprintf('subject/%s/', experiment_name); %name of the output folder containing the subject's data 
-outfolder_mTRFfig = strcat(outfolder, 'mTRF_fig_nonsub/');
+outfolder_mTRFfig = strcat(outfolder, 'mTRF_fig_nonsub_lambda/');
 mkdir(outfolder_mTRFfig)
-outfolder_mTRFmdl = strcat(outfolder, 'mTRF_mdl_nonsub/');
+outfolder_mTRFmdl = strcat(outfolder, 'mTRF_mdl_nonsub_lambda/');
 mkdir(outfolder_mTRFmdl)
 
 if OSflag(1) == "1" %Mac
@@ -62,33 +66,30 @@ end
 
 %% parameters
 
-stim_tag = ["Target", "Masker", "Mixed"]; 
+stim_tag = ["Left", "Right", "Mixed"]; 
 % stim_dur = [5*60 10*60 stimulidur]; %stimuli extraction duration [sec] 
-stim_dur = [1 2 3 4 5 6 7 8 9 10]*60; %duration for analysis
-stim_dur_load = 10*60; %loading stimuli duration
-slice_step = 1*60; %step of slice (sec)
-MaxStep = 10*60; %maximum duration of slice (sec)
 
 %% stimulus preparation
 
-ExpVer = contains(experiment_name,'mTRFpilot_v2'); %experiment version check
+stimfilename = "stimulus_mTRF/stim_mTRfpilot_v4.mat";
+ExpVer = contains(experiment_name,'mTRFpilot_v4'); %experiment version check
+ExpStim = exist(stimfilename, 'file');
 
 %%% stimuli info
 fs_Sound_down = 8000; %consider the frequency range of speech 
+stimulidur = timerange_Tgt(2) - timerange_Tgt(1);
 
-ExpVer =true;
-
-if ExpVer
-    stim_str = load('stimulus_mTRF/stim_mTRfpilot_v2.mat');
+if ExpVer && ExpStim
+    disp('### loading stimuli ###')
+    stim_str = load(stimfilename);
     stim = stim_str.stim;
     disp('### stimuli have been loaded ###')
 else
-    stimulus = stimGen(path_Tgt, timerange_Tgt, path_Msk, timerange_Msk, fs_Sound);
+    [stimulus, fs_Sound] = stimGen(path_Tgt, timerange_Tgt, path_Msk, timerange_Msk);
     stimulus(:,3) = stimulus(:,1) + stimulus(:,2); %mixed stimulus
-    stimulidur = timerange_Tgt(2) - timerange_Tgt(1);
     
     %%% resample and extract stimuli
-    stimulus_downsmpl = resample(stimulus(1:stim_dur_load*fs_Sound,:),fs_Sound_down,fs_Sound);
+    stimulus_downsmpl = resample(stimulus,fs_Sound_down,fs_Sound);
     
     for i =1:size(stimulus,2)
         disp('### begin stimuli conversion ###')
@@ -104,34 +105,43 @@ end
 
 %%% chanel info
 chs = ["Fz", "Cz"];
+numch = [4, 8];
+instruction = ["Left", "Right"];
 
 fs_New = 128;
 
 %% mTRf processing
 
-for i = 1:length(stim_dur)
-    stim_ext = resample(stim(1:stim_dur(i)*fs_Sound_down,:,:), fs_New, fs_Sound_down);
-    resp = resample(epochs(1:stim_dur(i)*fs_EEG,:), fs_New, fs_EEG);
-    for j =1:size(stim,3)
-        
-        %%% mTRF estimation
-        for k = 1:length(chs)
-            model = TRFestimation_v1(stim_ext(:,:,j), fs_New, resp, fs_New, 0);
-            
-            sgtitle(sprintf('mTRF stimulus: %s, duration:%0.0f s, %s ', stim_tag(j), stim_dur(i), chs(k)))
-            filename = sprintf('mTRF_%s_%0.0fs_%s', stim_tag(j), stim_dur(i), chs(k));
-            filename_pdf = strcat(outfolder_mTRFfig, filename, '.pdf');
-            filename_mdl = strcat(outfolder_mTRFmdl, 'model_', filename, '.mat');
-            saveas(gcf, filename_pdf)
-            save(filename_mdl,'model');
-            disp(strcat(filename, ' has been saved'))
+lambda_var = .1:.1:1; %lambda variation
 
-        end    
+for l = 1:length(lambda_var)
+    for i = 1:length(inst_flg)
+        for j =1:size(stim,3)
+            stim_ext = resample(stim, fs_New, fs_Sound_down);
+            resp = resample(epochs(1:stimulidur*fs_EEG,:,i), fs_New, fs_EEG);    
+            
+            %%% model training
+            model = TRFestimation_v2(stim_ext(:,:,j), fs_New, resp, fs_New, 0, 0, lambda_var(l));
+            filename = sprintf('mTRF_%s_inst%s_lmd%1.1f', stim_tag(j), instruction(i), lambda_var(l));
+            filename_mdl = strcat(outfolder_mTRFmdl, 'model_', filename, '.mat');
+            save(filename_mdl,'model');
+    
+            %%% mTRF estimation (figure)
+            for k = 1:length(chs)   
+                TRFestimation_v2(stim_ext(:,:,j), fs_New, resp, fs_New, numch(k), model, lambda_var(l));
+                sgtitle(sprintf('mTRF stimulus: %s,inst: %s, %s, lmd%1.1f', stim_tag(j), instruction(i), chs(k), lambda_var(l)))
+                filename_pdf = strcat(outfolder_mTRFfig, filename, '_', chs(k), '.pdf');
+                saveas(gcf, filename_pdf)
+                disp(strcat(filename, ' figure has been saved'))
+    
+            end    
+        end
     end
 end
 
 %% stimulus preparation function %%%
-function stimulus = stimGen(path_Tgt, timerange_Tgt, path_Msk, timerange_Msk)
+function [stimulus, fs_t] = stimGen(path_Tgt, timerange_Tgt, path_Msk, timerange_Msk)
+    %%% 2023213 resample section
 
     d_fifo = 10; %duration of fadein/fadeout (ms)
     
@@ -141,6 +151,10 @@ function stimulus = stimGen(path_Tgt, timerange_Tgt, path_Msk, timerange_Msk)
     
     dur_Tgt = timerange_Tgt(2) - timerange_Tgt(1);
     dur_Msk = timerange_Msk(2) - timerange_Msk(1);
+
+    if fs_t~=fs_m
+        resample(dur_Msk, fs_t,fs_m);
+    end
     
     if dur_Tgt < dur_Msk
         wavTgt = wavTgt_raw(timerange_Tgt(1)*fs_t+1 : timerange_Tgt(2)*fs_t);

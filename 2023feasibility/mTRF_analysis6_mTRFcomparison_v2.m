@@ -1,4 +1,4 @@
-%%% mTRF analysis - step 6 mTRF SNR comparison %%% 
+%%% mTRF analysis - step 6 mTRF SNR comparison v2 %%% 
 %%% - time slice
 %%%
 %%% required Add-ons
@@ -15,6 +15,7 @@
 %%% 20231030 SNR data save section
 %%% v2
 %%% 20231101 time slice
+%%% 20231130 nonsub data
 
 clearvars; 
 close all;
@@ -31,9 +32,9 @@ prompt = 'Choose folder name:';  % prompt message
 [foldInd,tf] = listdlg('PromptString',prompt,'SelectionMode','single','ListSize',[400 750],'ListString',folders.name); % option selection window
 experiment_name = folders.name{foldInd,:}; %subject (experiment) name
 outfolder =  sprintf('subject/%s/', experiment_name); %name of the output folder containing the subject's data 
-outfolder_mTRFfig_step6 = strcat(outfolder, 'mTRF_fig/step6/timeslice/');
+outfolder_mTRFfig_step6 = strcat(outfolder, 'mTRF_fig_nonsub/step6/timeslice/');
 mkdir(outfolder_mTRFfig_step6)
-outfolder_mTRFmdl = strcat(outfolder, 'mTRF_mdl/');
+outfolder_mTRFmdl = strcat(outfolder, 'mTRF_mdl_nonsub/');
 mkdir(outfolder_mTRFmdl)
 
 % if OSflag(1) == "1"
@@ -91,7 +92,7 @@ for j =1: numStimtag
             
             for l = 1:numSlice(i)
                 %%% load model
-                filename = sprintf('mTRF_%s_%0.0fs_%s_slice%02.f', stim_tag(j), stim_dur(i), chs(k), l);
+                filename = sprintf('mTRF_%s_%0.0fs_slice%02.f', stim_tag(j), stim_dur(i), l);
                 filename_mdl = strcat(outfolder_mTRFmdl, 'model_', filename, '.mat');
                 load(filename_mdl);
                 disp(strcat(filename, ' has been loaded'))

@@ -11,7 +11,7 @@
 %%% - subjectlist/subjlist_mTRF_*.csv
 
 %%% v1  
-%%% 20231030 inbetween ubject comparison (for step6-v1)
+%%% 20231030 inbetween subject comparison (for step6-v1)
 
 clearvars; 
 close all;
@@ -32,7 +32,7 @@ numCh = length(chs);
 
 %% load list
 
-subjectlist = "subjlist_mTRF_ver20231101";
+subjectlist = "subjlist_mTRF_ver20231030";
 filesubject = strcat('subjectlist/', subjectlist, '.csv');
 listname = string(extractBetween(filesubject, '/', '.csv'));
 opts = detectImportOptions(filesubject);
@@ -57,6 +57,7 @@ for i = 1:Snum
     elseif OSflag(1) == "2"
         SNRdata(i,:,:,:) = struct2array(load([foldTemp SNRfile])); %SNR data
     end
+    %index:SNRdata(subject, stimuli duration, channel, stimuli tag)
 
 end
 
@@ -105,7 +106,9 @@ for i = 1:numCh
         
     SNR_tbl_temp = SNR_tbl(SNR_tbl.Channel == chs(i),:);
     SNR_tbl_temp.StimDur = categorical(SNR_tbl_temp.StimDur,stim_dur_lbl);
-    boxchart(SNR_tbl_temp.StimDur,SNR_tbl_temp.SNR,'GroupByColor',SNR_tbl_temp.Variation); hold on;
+    groupdata = reordercats(categorical(SNR_tbl_temp.StimTag), stim_tag);
+    boxchart(SNR_tbl_temp.StimDur,SNR_tbl_temp.SNR,'GroupByColor',groupdata); hold on;
+
     for j = 1:numTag  
         plot(squeeze(SNRdata_mean(:,i,j)),'-o', 'Color',cols(j));    hold on; %average lines
         leg_SNR(j) = string(sprintf('%s, %s', stim_tag(j), chs(i)));  

@@ -122,7 +122,8 @@ for k = 1:numDur
         index_temp = logical((SNR_tbl.Channel == chs(i)).*(SNR_tbl.StimDur == string(stim_dur_lbl(k))));
         SNR_tbl_temp = SNR_tbl(index_temp,:);
         SNR_tbl_temp.Slice = categorical(SNR_tbl_temp.Slice,varSlice_dur);
-        boxchart(SNR_tbl_temp.Slice,SNR_tbl_temp.SNR,'GroupByColor',SNR_tbl_temp.Variation); hold on;
+        groupdata = reordercats(categorical(SNR_tbl_temp.StimTag), stim_tag);
+        boxchart(SNR_tbl_temp.Slice,SNR_tbl_temp.SNR,'GroupByColor',groupdata); hold on;
         for j = 1:numTag
             
             plot(squeeze(SNRdata_mean(1:numSlice(k),k,i,j)),'-o', 'Color',cols(j));    hold on; %average lines

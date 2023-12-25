@@ -31,8 +31,8 @@ experiment_name = folders.name{foldInd,:}; %subject (experiment) name
 outfolder =  sprintf('subject/%s/', experiment_name); %name of the output folder containing the subject's data 
 outfolder_mTRFfig_step6 = strcat(outfolder, 'mTRF_fig/step6/');
 mkdir(outfolder_mTRFfig_step6)
+% outfolder_mTRFmdl = strcat(outfolder, 'mTRF_mdl/');
 outfolder_mTRFmdl = strcat(outfolder, 'mTRF_mdl/');
-mkdir(outfolder_mTRFmdl)
 
 if OSflag(1) == "1"
     %%% get filenames

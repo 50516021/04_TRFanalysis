@@ -10,17 +10,18 @@
 %%% - 
 
 %%% v1  
-%%% 09/21/2023 simple function
+%%% 20230921 simple function
+%%% 20231129 function just for training
 
 
-function model = TRFestimation_v1(stim_original, fs_Sound, EEG, fs_EEG, chan)
+function model = TRFestimation_v1(stim_original, fs_Sound, EEG, fs_EEG, chan, model)
 
 %% parameters
 
 % fs_EEG = 256; %sampling rate for EEG (already resampled)
 % fs_Sound = 48000; %sampling rate for the sound
 fs_mTRF = fs_EEG; %sampling rate for mTRF
-% chan = 1; %EEG channel
+% chan = 1; %EEG channel, if chan = 0, just do training
 
 %% resample data
 stim=resample(stim_original, fs_mTRF, fs_Sound);
@@ -50,27 +51,34 @@ Dir = 1;
 % Note, ridge regression is used instead of Tikhonov regularization to
 % avoid cross-channel leakage of the multivariate input features
 %%% mTRFtrain(STIM,RESP,FS,DIR,TMIN,TMAX,LAMBDA) %%%
-model = mTRFtrain(stim,resp,fs_mTRF,Dir,tmin,tmax,lambda,'method','ridge',...
-'split',5,'zeropad',0);
+
+if ~isstruct(model)
+    model = mTRFtrain(stim,resp,fs_mTRF,Dir,tmin,tmax,lambda,'method','ridge',...
+    'split',5,'zeropad',0);
+end
 
 %% Plot figure 
 
-% Plot STRF
-figure
-subplot(2,2,1), mTRFplot(model,'mtrf','all',chan,[-50,350]);
-title(sprintf('Speech STRF')), ylabel('Frequency band'), xlabel('')
+if chan~=0
 
-% Plot GFP
-subplot(2,2,2), mTRFplot(model,'mgfp','all','all',[-50,350]);
-title('Global Field Power'), xlabel('')
+    % Plot STRF
+    figure
+    subplot(2,2,1), mTRFplot(model,'mtrf','all',chan,[-50,350]);
+    title(sprintf('Speech STRF')), ylabel('Frequency band'), xlabel('')
+    
+    % Plot GFP
+    subplot(2,2,2), mTRFplot(model,'mgfp','all','all',[-50,350]);
+    title('Global Field Power'), xlabel('')
+    
+    % Plot TRF
+    subplot(2,2,3), mTRFplot(model,'trf','all',chan,[-50,350]);
+    title(sprintf('Speech TRF')), ylabel('Amplitude (a.u.)')
+    
+    % Plot GFP
+    subplot(2,2,4), mTRFplot(model,'gfp','all','all',[-50,350]);
+    title('Global Field Power')
 
-% Plot TRF
-subplot(2,2,3), mTRFplot(model,'trf','all',chan,[-50,350]);
-title(sprintf('Speech TRF')), ylabel('Amplitude (a.u.)')
-
-% Plot GFP
-subplot(2,2,4), mTRFplot(model,'gfp','all','all',[-50,350]);
-title('Global Field Power')
+end
 
 % figtitle = sprintf('Speech:%s-%s-%s, SNR:%d, SpPat:%s, Ch:%s, variation:%s', Gens(indGen), Cols(indCol), Nums(indNum), SNR, SPts(indSPt), Chls{chan}, var);
 % sgtitle(figtitle)

@@ -104,6 +104,7 @@ end
 
 %%% chanel info
 chs = ["Fz", "Cz"];
+numch = [4, 8];
 
 fs_New = 128;
 
@@ -114,17 +115,19 @@ for i = 1:length(stim_dur)
     resp = resample(epochs(1:stim_dur(i)*fs_EEG,:), fs_New, fs_EEG);
     for j =1:size(stim,3)
         
-        %%% mTRF estimation
-        for k = 1:length(chs)
-            model = TRFestimation_v1(stim_ext(:,:,j), fs_New, resp, fs_New, 0);
-            
+        %%% model training
+        model = TRFestimation_v1(stim_ext(:,:,j), fs_New, resp, fs_New, 0, 0);
+        filename = sprintf('mTRF_%s_%0.0fs', stim_tag(j), stim_dur(i));
+        filename_mdl = strcat(outfolder_mTRFmdl, 'model_', filename, '.mat');
+        save(filename_mdl,'model');
+
+        %%% mTRF estimation (figure)
+        for k = 1:length(chs)   
+            TRFestimation_v1(stim_ext(:,:,j), fs_New, resp, fs_New, numch(k), model);
             sgtitle(sprintf('mTRF stimulus: %s, duration:%0.0f s, %s ', stim_tag(j), stim_dur(i), chs(k)))
-            filename = sprintf('mTRF_%s_%0.0fs_%s', stim_tag(j), stim_dur(i), chs(k));
-            filename_pdf = strcat(outfolder_mTRFfig, filename, '.pdf');
-            filename_mdl = strcat(outfolder_mTRFmdl, 'model_', filename, '.mat');
+            filename_pdf = strcat(outfolder_mTRFfig, filename, '_', chs(k), '.pdf');
             saveas(gcf, filename_pdf)
-            save(filename_mdl,'model');
-            disp(strcat(filename, ' has been saved'))
+            disp(strcat(filename, ' figure has been saved'))
 
         end    
     end
