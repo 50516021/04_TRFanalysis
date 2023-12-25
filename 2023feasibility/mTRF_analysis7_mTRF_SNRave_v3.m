@@ -25,16 +25,16 @@ addpath('../'); %add path above
 OSflag = OSdetection_v1;
 figurepath = "figure/";
 
-stim_tag = ["Target", "Masker", "Mixed"]; 
-numTag = length(stim_tag);
-stim_dur = [1 2 3 4 5 6 7 8 9 10]*60; %duration for analysis
-numDur = length(stim_dur);
-chs = ["Fz", "Cz"];
-numCh = length(chs);
+stim_tag    = ["Target", "Masker", "Mixed"]; 
+numTag      = length(stim_tag);
+chs         = ["Fz", "Cz"];
+numCh       = length(chs);
+instruction = ["Left", "Right"];
+numInst     = length(instruction);
 
 %% load list
 
-subjectlist = "subjlist_mTRF_ver20231030";
+subjectlist = "subjlist_mTRF_ver20231224";
 filesubject = strcat('subjectlist/', subjectlist, '.csv');
 listname = string(extractBetween(filesubject, '/', '.csv'));
 opts = detectImportOptions(filesubject);
@@ -67,33 +67,25 @@ end
 
 %% data preparation 
 
-%%% make legend array for stimuli
-for i = 1:length(stim_dur)
-    stim_dur_leg(i) = strcat(string(num2str(stim_dur(i)/60)), "min");
-    stim_dur_lbl(i) = string(num2str(stim_dur(i)/60));
-end
-
 SNRdata_mean  =  squeeze(mean(SNRdata, 1)); %mean for all participants 
 
 %%% make the table for box plot
 co = 0;
-for k = 1:numDur
-    for i = 1:numCh
-        for j = 1:numTag
-            for l = 1:Snum
-                co = co + 1;
-                
-                StimDur(co) = string(stim_dur_lbl(k));
-                Channel(co) = chs(i);
-                StimTag(co) = stim_tag(j);
-                Vari(co)    = string(sprintf('%s, %s', stim_tag(j), chs(i))); 
-                subj(co)    = subList.ID(l);
-                SNR(co)     = SNRdata(l,k,i,j) ;
-               
-            end
+for i = 1:numCh
+    for j = 1:numTag
+        for l = 1:Snum
+            co = co + 1;
+            
+            Channel(co) = chs(i);
+            StimTag(co) = stim_tag(j);
+            Vari(co)    = string(sprintf('%s, %s', stim_tag(j), chs(i))); 
+            subj(co)    = subList.ID(l);
+            SNR(co)     = SNRdata(l,k,i,j) ;
+           
         end
     end
 end
+
 
 SNR_tbl = table(StimDur', Channel', StimTag', Vari', subj', SNR');
 SNR_tbl.Properties.VariableNames = ["StimDur", "Channel", "StimTag", "Variation", "subject", "SNR"];
