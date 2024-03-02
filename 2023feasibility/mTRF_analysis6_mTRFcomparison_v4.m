@@ -18,6 +18,7 @@
 %%% 20231207 two instructions 'experiment_mTRF_feasibility_v4.m' (non-duratio/slice)
 %%% v4
 %%% 20240220 peak comparison
+%%% 20240227 ICA option
 
 clearvars; 
 close all;
@@ -27,6 +28,15 @@ addpath('../../02_EEGanalysis'); %add path of EEGanalysis
 
 OSflag = OSdetection_v1;
 
+ICAopt = 1; %use ICA data (1) or not (0)
+if ICAopt
+    namekey = 'step4_plotdatav3_*';
+    nameopt = "_ICA_";
+else      
+    namekey = 'step4_plotdata_*';   
+    nameopt = "_";
+end
+
 %% parameters
 %%%get folder name
 folders = struct2table(dir('subject/s*'));
@@ -34,14 +44,21 @@ prompt = 'Choose folder name:';  % prompt message
 [foldInd,tf] = listdlg('PromptString',prompt,'SelectionMode','single','ListSize',[400 750],'ListString',folders.name); % option selection window
 experiment_name = folders.name{foldInd,:}; %subject (experiment) name
 outfolder =  sprintf('subject/%s/', experiment_name); %name of the output folder containing the subject's data 
-outfolder_mTRFfig_step6 = strcat(outfolder, 'mTRF_fig_nonsub/step6/');
-mkdir(outfolder_mTRFfig_step6)
-% outfolder_mTRFmdl = strcat(outfolder, 'mTRF_mdl/');
-outfolder_mTRFmdl = strcat(outfolder, 'mTRF_mdl_nonsub/');
 
-if OSflag(1) == "1"
+if ICAopt
+    outfolder_mTRFfig_step6 = strcat(outfolder, 'mTRF_fig/step6/');
+    outfolder_mTRFmdl       = strcat(outfolder, 'mTRF_mdl/');
+else
+    outfolder_mTRFfig_step6 = strcat(outfolder, 'mTRF_fig_nonsub/step6/');
+    outfolder_mTRFmdl       = strcat(outfolder, 'mTRF_mdl_nonsub/');
+end
+
+mkdir(outfolder_mTRFfig_step6)
+mkdir(outfolder_mTRFmdl)
+
+if OSflag(1) == "1" %Mac
     %%% get filenames
-    EEGfile = ls([outfolder, 'step4_*']); %find responce file
+    EEGfile = ls([outfolder, namekey]); %find responce file
     EEGfile = EEGfile(1:end-1); %extract unnecessary charactar
     load(EEGfile); %participant's responces
     
@@ -50,9 +67,9 @@ if OSflag(1) == "1"
     metadata_file = metadata_file(1:end-1); %extract unnecessary charactar
     load(metadata_file); %participant's responces
 
-elseif OSflag(1) == "2"
+elseif OSflag(1) == "2" %Windows
     %%% get filenames
-    EEGfile = ls([outfolder, 'step4_*']); %find responce file
+    EEGfile = ls([outfolder, namekey]); %find responce file
     load([outfolder EEGfile]); %participant's responces
     
     %%% get meta data (stimuli info)
@@ -77,7 +94,7 @@ for k = 1:numCh
         for l = 1:length(inst_flg)
 
             filename = sprintf('mTRF_%s_inst%s', stim_tag(j), instruction(l));
-            filename_mdl = strcat(outfolder_mTRFmdl, 'model_', filename, '.mat');
+            filename_mdl = strcat(outfolder_mTRFmdl, 'model', nameopt, filename, '.mat');
             load(filename_mdl);
             disp(strcat(filename, ' has been loaded'))
             [x, y] = mTRFplot_pros(model,'trf','all',k,[-50,350]);
@@ -96,8 +113,8 @@ end
 %% peak ratio figures
 
 xrange = [-50, 350];
-yrange = [-6e-4, 6e-4];
-peakrange = [100, 300]; 
+yrange = [-7e-4, 10e-4];
+peakrange = [0, 350]; 
 
 for k = 1:numCh
     for j =1: numStimtag-1 %except mix
@@ -152,12 +169,12 @@ end
 
 legend("matched","unmatched", "max for matched", 'Location','best')
 sgtitle(sprintf('TRF peaks %s', experiment_name),'interpreter', "latex")
-filename_pdf = strcat(outfolder_mTRFfig_step6, sprintf('TRF_%s', experiment_name), '.pdf');
+filename_pdf = strcat(outfolder_mTRFfig_step6, sprintf('TRF%s%s',nameopt, experiment_name), '.pdf');
 saveas(gcf, filename_pdf)
 
 %% save SNR data 
 
-filename_data = strcat(outfolder, sprintf('step6_matchTRF_%s', experiment_name), '.mat');
+filename_data = strcat(outfolder, sprintf('step6_matchTRF', nameopt, '%s', experiment_name), '.mat');
 save(filename_data, 'x', 'TRF_match', 'TRF_unmatch')
 
 %% mTRF processing for plot function
