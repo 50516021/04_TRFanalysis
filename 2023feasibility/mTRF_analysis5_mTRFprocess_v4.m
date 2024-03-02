@@ -21,6 +21,7 @@
 %%% 20231014 load common stim file for mTRFpilot_v2 experiments (fs fixed)
 %%% v4
 %%% 20231101 time slice
+%%% 20240222 ICA option
 
 clearvars; 
 close all;
@@ -47,7 +48,7 @@ fs_Sound = 48000;
 
 if OSflag(1) == "1"
     %%% get filenames
-    EEGfile = ls([outfolder, 'step4_*']); %find responce file
+    EEGfile = ls([outfolder, 'step4_plotdatav3*']); %find responce file
     EEGfile = EEGfile(1:end-1); %extract unnecessary charactar
     load(EEGfile); %participant's responces
     
@@ -58,7 +59,7 @@ if OSflag(1) == "1"
 
 elseif OSflag(1) == "2"
     %%% get filenames
-    EEGfile = ls([outfolder, 'step4_*']); %find responce file
+    EEGfile = ls([outfolder, 'step4_plotdatav3*']); %find responce file
     load([outfolder EEGfile]); %participant's responces
     
     %%% get meta data (stimuli info)

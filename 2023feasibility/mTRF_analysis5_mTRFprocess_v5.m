@@ -20,6 +20,7 @@
 %%% 20231129 nonsub - raw data
 %%% v4
 %%% 20231207 two instructions 'experiment_mTRF_feasibility_v4.m'
+%%% 20240222 ICA option
 
 clearvars; 
 close all;
@@ -28,6 +29,13 @@ addpath('../'); %add path above
 addpath('../../02_EEGanalysis'); %add path of EEGanalysis
 
 OSflag = OSdetection_v1;
+
+ICAopt = 1; %use ICA data (1) or not (0)
+if ICAopt; namekey = 'step4_plotdatav3_*';
+else;      namekey = 'step4_plotdata_*';   end
+
+Hotch = [4 8]; % Fz and Cz
+Coldch = [14 15]; % O1 and O2
 
 %% parameters
 %%%get folder name
@@ -43,7 +51,7 @@ mkdir(outfolder_mTRFmdl)
 
 if OSflag(1) == "1" %Mac
     %%% get filenames
-    EEGfile = ls([outfolder, 'step4_*']); %find responce file
+    EEGfile = ls([outfolder, namekey]); %find responce file
     EEGfile = EEGfile(1:end-1); %extract unnecessary charactar
     load(EEGfile); %participant's responces
     
@@ -54,13 +62,17 @@ if OSflag(1) == "1" %Mac
 
 elseif OSflag(1) == "2" %Windows
     %%% get filenames
-    EEGfile = ls([outfolder, 'step4_*']); %find responce file
+    EEGfile = ls([outfolder, namekey]); %find responce file
     load([outfolder EEGfile]); %participant's responces
     
     %%% get meta data (stimuli info)
     metadata_file = ls([outfolder '/metadata*']);
     load([outfolder metadata_file]); %participant's responces
 end
+
+% if ICAopt; epochs = saveEp; end %use subtracted (ICAed) epoch
+epochs(:,[Hotch(1) Hotch(2)],:) = epochs(:,[Hotch(1) Hotch(2)],:)-epochs(:,[Coldch(1) Coldch(2)],:)/2-epochs(:,[Coldch(2) Coldch(1)],:)/2; %subtraction from center channel
+
 
 %% parameters
 
@@ -110,23 +122,33 @@ fs_New = 128;
 
 %% mTRf processing
 
-
 for i = 1:length(inst_flg)
     for j =1:size(stim,3)
         stim_ext = resample(stim, fs_New, fs_Sound_down);
-        resp = resample(epochs(1:stimulidur*fs_EEG,:,i), fs_New, fs_EEG);    
+        % resp = resample(epochs(1:stimulidur*fs_EEG,:,i), fs_New, fs_EEG);   
         
-        %%% model training
-        model = TRFestimation_v1(stim_ext(:,:,j), fs_New, resp, fs_New, 0, 0);
-        filename = sprintf('mTRF_%s_inst%s', stim_tag(j), instruction(i));
-        filename_mdl = strcat(outfolder_mTRFmdl, 'model_', filename, '.mat');
-        save(filename_mdl,'model');
+        % %%% model training
+        % model = TRFestimation_v1(stim_ext(:,:,j), fs_New, resp, fs_New, 0, 0);
+        % filename = sprintf('mTRF_%s_inst%s', stim_tag(j), instruction(i));
+        % filename_mdl = strcat(outfolder_mTRFmdl, 'model_', filename, '.mat');
+        % % save(filename_mdl,'model');
 
         %%% mTRF estimation (figure)
         for k = 1:length(chs)   
-            TRFestimation_v1(stim_ext(:,:,j), fs_New, resp, fs_New, numch(k), model);
+
+            resp = resample(epochs(1:stimulidur*fs_EEG,:,i), fs_New, fs_EEG);   
+
+            %%% model training
+            model = TRFestimation_v1(stim_ext(:,:,j), fs_New, resp, fs_New, 0, 0);
+            filename = sprintf('mTRF_%s_inst%s', stim_tag(j), instruction(i));
+            filename_mdl = strcat(outfolder_mTRFmdl, 'model_', filename, '.mat');
+            % save(filename_mdl,'model');
+            
+            % TRFestimation_v1(stim_ext(:,:,j), fs_New, resp, fs_New, numch(k), model);
+
+            TRFestimation_v1(stim_ext(:,:,j), fs_New, resp, fs_New, Hotch(k), model);
             sgtitle(sprintf('mTRF stimulus: %s,inst: %s, %s ', stim_tag(j), instruction(i), chs(k)))
-            filename_pdf = strcat(outfolder_mTRFfig, filename, '_', chs(k), '.pdf');
+            filename_pdf = strcat(outfolder_mTRFfig, filename, '_all_', chs(k), '.pdf');
             saveas(gcf, filename_pdf)
             disp(strcat(filename, ' figure has been saved'))
 

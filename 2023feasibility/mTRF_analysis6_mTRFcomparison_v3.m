@@ -89,7 +89,6 @@ end
 
 %% SNR figures
 
-
 for l = 1:length(inst_flg)
     co  = 0;
     for k = 1:numCh

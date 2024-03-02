@@ -49,12 +49,12 @@ pop_selectcomps(EEG, 1:EEG.nbchan );
 figure; 
 plot(mean(epochs_pre,3));hold on; 
 line([128 640;128 640], get(gca, 'ylim'));
-title(sprintf('Before removal (%s)',data_name))
+title(sprintf('Before removal (%s)',data_name),'interpreter', "latex")
 xticklabels;
 set(gcf,'position',[1   216   560   420]);
 %sh
 
-keyboard;
+CAkeyboard;
 
 close all;
 
@@ -77,11 +77,11 @@ mx = squeeze(max(max(abs(epochs(toi,:,:)))));
 figure
 set(gcf,'position',[1   216   560   420])
 histogram(mx,50)
-title(data_name)
+title(data_name,'interpreter', "latex")
 drawnow();
 % thresT = str2double(input('thres? ','s'));
 % gt = find(mx<thresT); %index of good trials
-title(sprintf('%s, trials',data_name));
+title(sprintf('%s, trials',data_name),'interpreter', "latex");
 
 pdfname = append(outfolder, 'step3_', data_name, '_thTr2nd', '.pdf');
 print(pdfname,'-dpdf');
@@ -147,13 +147,13 @@ figure;
 subplot(2,1,1);
 plot(t,mean(epochs_pre(1:256*(baselinedur+shorteststs),allchs,:),3));hold on; 
 line([0;0], get(gca, 'ylim'));
-title('Before removal')
+title('Before removal','interpreter', "latex")
 legend(legendsnum(allchs));
 
 subplot(2,1,2);
 plot(t,mean(epochs(1:256*(baselinedur+shorteststs),allchs,:),3));hold on; 
 line([0;0], get(gca, 'ylim'));
-title(sprintf('After removing %02i components',length(comps)))
+title(sprintf('After removing %02i components',length(comps)),'interpreter', "latex")
 legend(legendsnum(allchs));
 saveas(gcf, strcat(outfolder, 'step3_', data_name, '_evokedWaveforms_BeforeAndAfterICAafterRejections_byIC.pdf'))
 
@@ -175,16 +175,17 @@ plot(t, plotEp_bf)
 ylim([-yscale yscale]); 
 xlim([-baselinedur shorteststs]); hold on;
 plot(0*ones(2,1),ylim); hold on;
-title('Before removal')
+title('Before removal','interpreter', "latex")
 %after ICA
 subplot(2,1,2);
 plot(t, plotEp_af) 
 ylim([-yscale yscale]); 
 xlim([-baselinedur shorteststs]); hold on;
 plot(0*ones(2,1),ylim); hold on;
-title(sprintf('After removing %02i components',length(comps)))
+title(sprintf('After removing %02i components',length(comps)),'interpreter', "latex")
 
 legend(legends(:), 'location', 'southeast');
 saveas(gcf, strcat(outfolder, 'step3_', data_name, '_evokedWaveforms_BeforeAndAfterICAafterRejections_simple_byIC.pdf'))
 
 disp(['----- Processed: ' char(data_name), ' -----']) %make sure the processed data
+

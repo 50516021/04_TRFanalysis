@@ -58,11 +58,11 @@ close all
 figure
 set(gcf,'position',[1   216   560   420])
 histogram(mx,100)
-title(sprintf('%s, trial selection',data_name));
+title(sprintf('%s, trial selection',data_name),'interpreter', "latex");
 drawnow();
 % thresT = str2double(input('thres? ','s'));
 % GoodTrials = find(mx<thresT); %good trial index
-title(sprintf('%s trials',data_name));
+title(sprintf('%s trials',data_name),'interpreter', "latex");
 
 pdfname = append(outfolder, 'step2_', data_name, '_', 'thTr', '.pdf');
 print(pdfname,'-dpdf');
@@ -72,11 +72,11 @@ close all
 figure
 set(gcf,'position',[1   216   560   420])
 histogram(mxC,50)
-title(sprintf('%s, channel selection',data_name));
+title(sprintf('%s, channel selection',data_name),'interpreter', "latex");
 drawnow();
 % thresC = str2double(input('thres? ','s'));
 % BadChannels = find(mxC > thresC); %bad channel index
-title(sprintf('%s channels',data_name));
+title(sprintf('%s channels',data_name),'interpreter', "latex");
 
 pdfname = append(outfolder, 'step2_', data_name, '.pdf');
 print(pdfname,'-dpdf');

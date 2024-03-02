@@ -1,4 +1,4 @@
-%%% mTRF EEG analysis for EDF/CSV - step 1 ver3 %%% 
+%%% mTRF EEG analysis for EDF/CSV - step 1 ver4 %%% 
 %%% - epoching 
 %%% - feasibility test 2023
 %%%

@@ -1,0 +1,272 @@
+%%% mTRF analysis - step 5 mTRF model generation for various stimuli length - nonsub -> use raw data of all the cannels %%% 
+%%% - evoked responce, use all channels, two instructions version
+%%%
+%%% required Add-ons
+%%% - 
+%%% - 
+%%% required functions
+%%% - StimTrans_mTRF_v1.m
+%%% - TRFestimation_v1.m
+%%%
+%%% required setting files
+%%% - 
+
+%%% v1  
+%%% 20230921 experiment 'experiment_mTRF_feasibility_v1.m'
+%%% v2
+%%% 20230923 experiment 'experiment_mTRF_feasibility_v2.m'
+%%% v3
+%%% 20230927 for signal qualities   
+%%% 20231129 nonsub - raw data
+%%% v4
+%%% 20231207 two instructions 'experiment_mTRF_feasibility_v4.m'
+%%% v6
+%%% 20240216 sliced pseudo-realtime processing
+
+clearvars; 
+close all;
+
+addpath('../'); %add path above
+addpath('../../02_EEGanalysis'); %add path of EEGanalysis
+
+OSflag = OSdetection_v1;
+
+%% parameters
+%%%get folder name
+folders = struct2table(dir('subject/s*'));
+prompt = 'Choose folder name:';  % prompt message
+[foldInd,tf] = listdlg('PromptString',prompt,'SelectionMode','single','ListSize',[400 750],'ListString',folders.name); % option selection window
+experiment_name = folders.name{foldInd,:}; %subject (experiment) name
+outfolder =  sprintf('subject/%s/', experiment_name); %name of the output folder containing the subject's data 
+outfolder_mTRFfig = strcat(outfolder, 'mTRF_fig_nonsub/');
+mkdir(outfolder_mTRFfig)
+outfolder_mTRFmdl = strcat(outfolder, 'mTRF_mdl_nonsub/');
+mkdir(outfolder_mTRFmdl)
+
+if OSflag(1) == "1" %Mac
+    %%% get filenames
+    EEGfile = ls([outfolder, 'step4_*']); %find responce file
+    EEGfile = EEGfile(1:end-1); %extract unnecessary charactar
+    load(EEGfile); %participant's responces
+    
+    %%% get meta data (stimuli info)
+    metadata_file = ls([outfolder '/metadata*']);
+    metadata_file = metadata_file(1:end-1); %extract unnecessary charactar
+    load(metadata_file); %participant's responces
+
+elseif OSflag(1) == "2" %Windows
+    %%% get filenames
+    EEGfile = ls([outfolder, 'step4_*']); %find responce file
+    load([outfolder EEGfile]); %participant's responces
+    
+    %%% get meta data (stimuli info)
+    metadata_file = ls([outfolder '/metadata*']);
+    load([outfolder metadata_file]); %participant's responces
+end
+
+%% parameters
+
+stim_tag = ["Left", "Right", "Mixed"]; 
+% stim_dur = [5*60 10*60 stimulidur]; %stimuli extraction duration [sec] 
+
+windowsize = 240;  %sliced window size [sec]
+windowgap  = 10; %sliced window gap [sec]
+
+%% stimulus preparation
+
+stimfilename = "stimulus_mTRF/stim_mTRfpilot_v4.mat";
+ExpVer = contains(experiment_name,'mTRFpilot_v4'); %experiment version check
+ExpStim = exist(stimfilename, 'file');
+
+%%% stimuli info
+fs_Sound_down = 8000; %consider the frequency range of speech 
+stimulidur = timerange_Tgt(2) - timerange_Tgt(1);
+
+if ExpVer && ExpStim
+    disp('### loading stimuli ###')
+    stim_str = load(stimfilename);
+    stim = stim_str.stim;
+    disp('### stimuli have been loaded ###')
+else
+    [stimulus, fs_Sound] = stimGen(path_Tgt, timerange_Tgt, path_Msk, timerange_Msk);
+    stimulus(:,3) = stimulus(:,1) + stimulus(:,2); %mixed stimulus
+    
+    %%% resample and extract stimuli
+    stimulus_downsmpl = resample(stimulus,fs_Sound_down,fs_Sound);
+    
+    for i =1:size(stimulus,2)
+        disp('### begin stimuli conversion ###')
+        stim(:,:,i) = StimTrans_mTRF_v1(stimulus_downsmpl(:,i), fs_Sound_down);
+        disp('### conversion done ###')
+    end
+    
+    filename_stim = strcat(outfolder, 'stim_', experiment_name, '.mat');
+    save(filename_stim,'stim');
+end
+
+%% data preparation
+
+%%% chanel info
+chs = ["Fz", "Cz"];
+numch = [4, 8];
+instruction = ["Left", "Right"];
+
+fs_New = 128;
+
+%% mTRf processing and figure plot
+
+outfolder_mTRFfig_short = strcat(outfolder_mTRFfig, "shortterm/");
+mkdir(outfolder_mTRFfig_short)
+windowNum = fix((stimulidur-windowsize)/windowgap) + 1; %number of windows
+TRFrange = [-50,350];
+yticklabel_values = TRFrange(1):50:TRFrange(2); % y axis parameter
+
+% peakrange = [100 300]; 
+
+for i = 1:length(inst_flg)
+    for j =1:size(stim,3)
+        stim_ext = resample(stim, fs_New, fs_Sound_down);
+        resp = resample(epochs(1:stimulidur*fs_EEG,:,i), fs_New, fs_EEG);    
+
+        %%% mTRF estimation (figure)
+        for k = 1:length(chs)   
+            for l = 1:windowNum
+                wndw_strt = ((l-1)*windowgap)*fs_New+1;      %start point of window [sec*fs_New]
+                wndw_end  = wndw_strt+windowsize*fs_New-1;    %end   point of window [sec]
+                stim_wndw = stim_ext(wndw_strt:wndw_end,:,j); %extracted stimuli 
+                resp_wndw = resp(wndw_strt:wndw_end,:);       %extracted EEG responce
+                %%% model training
+                model = TRFestimation_v1(stim_wndw, fs_New, resp_wndw, fs_New, 0, 0);
+                [x, TRFs(:,l,i,j,k)] = mTRFplot_pros(model,'trf','all',numch(k),TRFrange);
+                % CreFac(l,i,j,k) = peak2rms(TRFs(:,l,i,j,k));
+            end
+            
+            if  k == 1; clims = [-8 9]*10^(-4);
+            else ;      clims = [-7 8]*10^(-4); end
+
+            % plot(CreFac(:,i,j,k))
+            imagesc(squeeze(TRFs(:,:,i,j,k)),clims)
+            colorbar
+
+            xlabel("Start Time (s)")
+            xlabelsNum = 10; %number of labels
+            xvalue = linspace(1,stimulidur,xlabelsNum);
+            xticks(linspace(1,windowNum,xlabelsNum))
+            xticklabels(fix(xvalue))
+
+            ylabel('Time lag (ms)')
+            basis = 1; %basis of x memories
+            yticks_points = (x(basis+1)-x(basis))^(-1)*(yticklabel_values-x(1));
+            yticks(yticks_points)
+            yticklabels(yticklabel_values)
+            ylim([min(yticks_points) max(yticks_points)])
+
+            sgtitle(sprintf('mTRF stimulus: %s,inst: %s, %s, window size:%2.0fs (gap:%2.1fs) ', stim_tag(j), instruction(i), chs(k), windowsize, windowgap))
+            % filename = sprintf('mTRFcrefac_sliced_wd%dgap%d%s_inst%s',windowsize, windowgap, stim_tag(j), instruction(i));
+            filename = sprintf('mTRF_sliced_wd%dgap%d%s_inst%s',windowsize, windowgap, stim_tag(j), instruction(i));
+            filename_pdf = strcat(outfolder_mTRFfig_short, filename, '_', chs(k), '.pdf');
+            saveas(gcf, filename_pdf)
+            disp(strcat(filename, ' figure has been saved'))
+
+        end    
+    end
+end
+
+%% stimulus preparation function %%%
+function [stimulus, fs_t] = stimGen(path_Tgt, timerange_Tgt, path_Msk, timerange_Msk)
+    %%% 2023213 resample section
+
+    d_fifo = 10; %duration of fadein/fadeout (ms)
+    
+    disp('preparing stimuli')
+    [wavTgt_raw, fs_t] = audioread(path_Tgt); % read Target file
+    [wavMsk_raw, fs_m] = audioread(path_Msk); % read Masker file
+    
+    dur_Tgt = timerange_Tgt(2) - timerange_Tgt(1);
+    dur_Msk = timerange_Msk(2) - timerange_Msk(1);
+
+    if fs_t~=fs_m
+        resample(dur_Msk, fs_t,fs_m);
+    end
+    
+    if dur_Tgt < dur_Msk
+        wavTgt = wavTgt_raw(timerange_Tgt(1)*fs_t+1 : timerange_Tgt(2)*fs_t);
+        wavMsk = wavMsk_raw(timerange_Msk(1)*fs_t+1 : (timerange_Msk(1)+dur_Tgt)*fs_t);
+    else
+        wavTgt = wavTgt_raw(timerange_Tgt(1)*fs_t+1 : timerange_Tgt(2)*fs_t);
+        wavMsk = [wavMsk_raw(timerange_Msk(1)*fs_t+1 : timerange_Msk(2)*fs_t), ...
+                    wavMsk_raw(timerange_Msk(1)+1 : (timerange_Msk(1)+dur_Tgt - dur_Msk)*fs_t)];
+    end
+    
+    %%% S/N configuration %%%
+    SNR = 0;
+    L = rms(wavMsk) * 10^(SNR/20)/ rms(wavTgt); %SNR = 20*log10(rms(target)/rms(masker))
+    wavTgt = L* wavTgt; 
+    
+    wavTgt = fadein(d_fifo, wavTgt, fs_t);
+    stimulus(:,1) = fadeout(d_fifo, wavTgt, fs_t);
+    wavMsk = fadein(d_fifo, wavMsk, fs_t);
+    stimulus(:,2) = fadeout(d_fifo, wavMsk, fs_t);
+    
+    disp('finish stimuli preparation')
+end
+
+%% mTRF processing for plot function
+function [x, y] = mTRFplot_pros(model,type,feat,chan,xlims,avgfeat,avgchan)
+
+% Set default values
+if nargin < 2 || isempty(type)
+    type = 'trf';
+end
+if model.Dir == -1
+    model.w = permute(model.w,[3,2,1]);
+end
+if nargin < 3 || isempty(feat) || strcmpi(feat,'all')
+    feat = 1:size(model.w,1);
+end
+if nargin < 4 || isempty(chan) || strcmpi(chan,'all')
+    chan = 1:size(model.w,3);
+end
+if nargin < 5 || isempty(xlims)
+    xlims = [model.t(1),model.t(end)];
+end
+if nargin < 6 || isempty(avgfeat)
+    avgfeat = 1;
+end
+if nargin < 7 || isempty(avgchan)
+    avgchan = 0;
+end
+
+% Define lags
+switch type
+    case {'mtrf','mgfp'}
+        [~,idx1] = min(abs(model.t-xlims(1)));
+        [~,idx2] = min(abs(model.t-xlims(2)));
+        lags = idx1:idx2;
+end
+
+% Define features and channels
+model.w = model.w(feat,:,chan);
+
+% Average features
+switch type
+    case {'trf','gfp'}
+        if avgfeat
+            model.w = mean(model.w,1);
+        end
+end
+
+% Average channels
+switch type
+    case {'trf','mtrf'}
+        if avgchan
+            model.w = mean(model.w,3);
+        end
+    case {'gfp','mgfp'}
+        model.w = std(model.w,1,3);
+end
+
+x = model.t; 
+y = model.w;
+
+end
