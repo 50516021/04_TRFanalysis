@@ -1,4 +1,4 @@
-%%% mTRF analysis - step 5 mTRF model generation for various stimuli length - nonsub -> use raw data of all the cannels %%% 
+%%% mTRF analysis - step 5 mTRF model generation for various stimuli length v6%%% 
 %%% - evoked responce, use all channels, two instructions version
 %%%
 %%% required Add-ons
@@ -21,7 +21,8 @@
 %%% v4
 %%% 20231207 two instructions 'experiment_mTRF_feasibility_v4.m'
 %%% v6
-%%% 20240216 sliced pseudo-realtime processing
+%%% 20240216 sliced short term processing
+%%% 20240222 ICA option
 
 clearvars; 
 close all;
@@ -31,6 +32,18 @@ addpath('../../02_EEGanalysis'); %add path of EEGanalysis
 
 OSflag = OSdetection_v1;
 
+ICAopt = 1; %use ICA data (1) or not (0)
+if ICAopt
+    namekey = 'step4_plotdatav3_*';
+    nameopt = "_ICA_";
+else      
+    namekey = 'step4_plotdata_*';   
+    nameopt = "_";
+end
+
+Hotch = [4 8]; % Fz and Cz
+Coldch = [14 15]; % O1 and O2
+
 %% parameters
 %%%get folder name
 folders = struct2table(dir('subject/s*'));
@@ -38,14 +51,21 @@ prompt = 'Choose folder name:';  % prompt message
 [foldInd,tf] = listdlg('PromptString',prompt,'SelectionMode','single','ListSize',[400 750],'ListString',folders.name); % option selection window
 experiment_name = folders.name{foldInd,:}; %subject (experiment) name
 outfolder =  sprintf('subject/%s/', experiment_name); %name of the output folder containing the subject's data 
-outfolder_mTRFfig = strcat(outfolder, 'mTRF_fig_nonsub/');
+
+if ICAopt
+    outfolder_mTRFfig = strcat(outfolder, 'mTRF_fig/');
+    outfolder_mTRFmdl = strcat(outfolder, 'mTRF_mdl/');
+else
+    outfolder_mTRFfig = strcat(outfolder, 'mTRF_fig_nonsub/');
+    outfolder_mTRFmdl = strcat(outfolder, 'mTRF_mdl_nonsub/');
+end
+
 mkdir(outfolder_mTRFfig)
-outfolder_mTRFmdl = strcat(outfolder, 'mTRF_mdl_nonsub/');
 mkdir(outfolder_mTRFmdl)
 
 if OSflag(1) == "1" %Mac
     %%% get filenames
-    EEGfile = ls([outfolder, 'step4_*']); %find responce file
+    EEGfile = ls([outfolder, namekey]); %find responce file
     EEGfile = EEGfile(1:end-1); %extract unnecessary charactar
     load(EEGfile); %participant's responces
     
@@ -56,7 +76,7 @@ if OSflag(1) == "1" %Mac
 
 elseif OSflag(1) == "2" %Windows
     %%% get filenames
-    EEGfile = ls([outfolder, 'step4_*']); %find responce file
+    EEGfile = ls([outfolder, namekey]); %find responce file
     load([outfolder EEGfile]); %participant's responces
     
     %%% get meta data (stimuli info)
@@ -64,12 +84,14 @@ elseif OSflag(1) == "2" %Windows
     load([outfolder metadata_file]); %participant's responces
 end
 
+if ICAopt; epochs = saveEp; end %use subtracted (ICAed) epoch
+
 %% parameters
 
 stim_tag = ["Left", "Right", "Mixed"]; 
 % stim_dur = [5*60 10*60 stimulidur]; %stimuli extraction duration [sec] 
 
-windowsize = 240;  %sliced window size [sec]
+windowsize = 120;  %sliced window size [sec]
 windowgap  = 10; %sliced window gap [sec]
 
 %% stimulus preparation
@@ -110,6 +132,7 @@ end
 chs = ["Fz", "Cz"];
 numch = [4, 8];
 instruction = ["Left", "Right"];
+situations = ["matched", "unmatched"];
 
 fs_New = 128;
 
@@ -119,12 +142,13 @@ outfolder_mTRFfig_short = strcat(outfolder_mTRFfig, "shortterm/");
 mkdir(outfolder_mTRFfig_short)
 windowNum = fix((stimulidur-windowsize)/windowgap) + 1; %number of windows
 TRFrange = [-50,350];
+CFTrange = [100,300]; %timerange of crest factor
 yticklabel_values = TRFrange(1):50:TRFrange(2); % y axis parameter
 
-% peakrange = [100 300]; 
+Stim_num = size(stim,3)-1; %except mix
 
 for i = 1:length(inst_flg)
-    for j =1:size(stim,3)
+    for j =1:Stim_num
         stim_ext = resample(stim, fs_New, fs_Sound_down);
         resp = resample(epochs(1:stimulidur*fs_EEG,:,i), fs_New, fs_EEG);    
 
@@ -135,22 +159,30 @@ for i = 1:length(inst_flg)
                 wndw_end  = wndw_strt+windowsize*fs_New-1;    %end   point of window [sec]
                 stim_wndw = stim_ext(wndw_strt:wndw_end,:,j); %extracted stimuli 
                 resp_wndw = resp(wndw_strt:wndw_end,:);       %extracted EEG responce
+                
                 %%% model training
                 model = TRFestimation_v1(stim_wndw, fs_New, resp_wndw, fs_New, 0, 0);
-                [x, TRFs(:,l,i,j,k)] = mTRFplot_pros(model,'trf','all',numch(k),TRFrange);
-                % CreFac(l,i,j,k) = peak2rms(TRFs(:,l,i,j,k));
+                if ICAopt
+                    [x, TRFs(:,l,i,j,k)] = mTRFplot_pros(model,'trf','all',k,TRFrange);
+                else
+                    [x, TRFs(:,l,i,j,k)] = mTRFplot_pros(model,'trf','all',numch(k),TRFrange);
+                end
+                CFind = CFTrange(1)<=x & CFTrange<=x;
+                CreFac(l,i,j,k) = peak2rms(TRFs(CFind,l,i,j,k));
             end
             
             if  k == 1; clims = [-8 9]*10^(-4);
-            else ;      clims = [-7 8]*10^(-4); end
+            else ;      clims = [-7 8]*10^(-4); end %color bar rnage
+            % clims = [max(max(max(max(max(TRFs))))) min(min(min(min(min(TRFs)))))];
+            %%% plot colormap %%%
+            figure;
 
-            % plot(CreFac(:,i,j,k))
             imagesc(squeeze(TRFs(:,:,i,j,k)),clims)
             colorbar
 
             xlabel("Start Time (s)")
             xlabelsNum = 10; %number of labels
-            xvalue = linspace(1,stimulidur,xlabelsNum);
+            xvalue = linspace(1,stimulidur-windowsize,xlabelsNum);
             xticks(linspace(1,windowNum,xlabelsNum))
             xticklabels(fix(xvalue))
 
@@ -161,16 +193,53 @@ for i = 1:length(inst_flg)
             yticklabels(yticklabel_values)
             ylim([min(yticks_points) max(yticks_points)])
 
-            sgtitle(sprintf('mTRF stimulus: %s,inst: %s, %s, window size:%2.0fs (gap:%2.1fs) ', stim_tag(j), instruction(i), chs(k), windowsize, windowgap))
+            sgtitle(sprintf('mTRF stimulus: %s, inst: %s, %s, window size:%2.0fs (gap:%2.1fs) ', stim_tag(j), instruction(i), chs(k), windowsize, windowgap),'interpreter', "latex")
             % filename = sprintf('mTRFcrefac_sliced_wd%dgap%d%s_inst%s',windowsize, windowgap, stim_tag(j), instruction(i));
             filename = sprintf('mTRF_sliced_wd%dgap%d%s_inst%s',windowsize, windowgap, stim_tag(j), instruction(i));
-            filename_pdf = strcat(outfolder_mTRFfig_short, filename, '_', chs(k), '.pdf');
+            filename_pdf = strcat(outfolder_mTRFfig_short, filename, nameopt, chs(k), '.pdf');
             saveas(gcf, filename_pdf)
             disp(strcat(filename, ' figure has been saved'))
 
         end    
     end
 end
+
+%% plot crestfactor
+
+peakrange = [100 300]; 
+CreFacrange = [1.5 4];
+
+Stim_oppos = Stim_num:-1:1; %opposite order matrix of stimuli
+
+figure;
+
+for k = 1:length(chs)  
+    subplot(2,1,k)
+    for j =1:Stim_num 
+        plot(CreFac(:,j,j,k)); hold on; %matched pattern
+        plot(CreFac(:,Stim_oppos(j),j,k)); hold on; %matched pattern  
+        legends_crfc((j-1)*2+1:j*2) = strcat(situations,  " ", stim_tag(j), " stim");
+    end
+
+    title(chs(k))
+
+    xlabel("Start Time (s)")
+    xlabelsNum = 10; %number of labels
+    xvalue = linspace(1,stimulidur-windowsize,xlabelsNum);
+    xticks(linspace(1,windowNum,xlabelsNum))
+    xticklabels(fix(xvalue))
+    
+    ylabel('Crest Factor')
+    ylim(CreFacrange)
+end
+
+legend(legends_crfc)
+
+sgtitle(sprintf('Crestfacter: window size:%2.0fs (gap:%2.1fs) ', windowsize, windowgap),'interpreter', "latex")
+filename = sprintf('mTRFcrefac_sliced_wd%dgap%d',windowsize, windowgap);
+filename_pdf = strcat(outfolder_mTRFfig_short, filename, nameopt, chs(k), '.pdf');
+saveas(gcf, filename_pdf)
+disp(strcat(filename, ' figure has been saved'))
 
 %% stimulus preparation function %%%
 function [stimulus, fs_t] = stimGen(path_Tgt, timerange_Tgt, path_Msk, timerange_Msk)

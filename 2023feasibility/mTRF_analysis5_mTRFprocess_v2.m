@@ -1,4 +1,4 @@
-%%% Spatial Attention EEG analysis for BDF/EDF/CSV - step 4 %%% 
+%%% Spatial Attention EEG analysis for BDF/EDF/CSV - step 4 v2 %%% 
 %%% - evoked responce
 %%%
 %%% required Add-ons
