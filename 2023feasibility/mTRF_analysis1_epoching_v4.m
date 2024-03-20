@@ -127,7 +127,7 @@ elseif dev == 2
     keyboard; %wait
     
     EEGstruct = EEG; %EEG data acquired by EEGLAB
-    chConv = [1:15 18:19 21:23]; %channel extraction (9-A1,16-X3,17-X2,18-A2,20-X1)
+    chConv = [1:15 18:19 21:23]; %channel extraction (9-A1,16-X3,17-X2,20-X1,21-A2 - renewed 03/20/2024, refers 'DSI-24 Channel Locations w.ced')
     numCh = length(chConv); %number of EEG channels (except trigger)
     fsOgnl = EEGstruct.srate; %[manual]
 

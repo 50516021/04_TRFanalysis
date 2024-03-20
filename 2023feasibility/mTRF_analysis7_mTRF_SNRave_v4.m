@@ -16,6 +16,7 @@
 %%% 20231224 two instructions 'experiment_mTRF_feasibility_v4.m' (non-duratio/slice)
 %%% v4 
 %%% 20240221 subtraction plot from step6 v4
+%%% 20240313 Jacknife
 
 clearvars; 
 close all;
@@ -35,9 +36,10 @@ instruction = ["Left", "Right"];
 numInst     = length(instruction);
 
 %%% for peak picking
-xrange = [-50, 350];
-yrange = [-6e-4, 6e-4];
-peakrange = [100, 300]; 
+xrange      = [-50, 350];
+yrange      = [-6e-4, 9e-4];
+peakrange   = [100, 300]; 
+peakrangeJK = peakrange; %peak range for Jackknife
 
 outfolder_mTRFfig_step7 = strcat(figurepath, 'step7/');
 mkdir(outfolder_mTRFfig_step7)
@@ -62,7 +64,7 @@ for i = 1:Snum
     filenames{i} = foldTemp;
 
     % load SNR data
-    TRFfile = ls(strcat(foldTemp, 'step6_matchTRF_s*')); %find responce file
+    TRFfile = ls(strcat(foldTemp, 'step6_matchTRF_ICA_s*')); %find responce file
     if OSflag(1) == "1"   %MacOS
         TRFfile = TRFfile(1:end-1); %extract unnecessary charactar
     elseif OSflag(1) == "2" %Windows
@@ -124,13 +126,14 @@ for k = 1:numCh
     end
 end
 
-figure;
+figure('Position', [100 100 800 600]);
 
 co = 0;
 for k = 1:numCh
     for j =1: numTag-1 %except mix
         co = co+1;
-        subplot(2,2,co)
+        % subplot(2,2,co)
+        nexttile;
         plot(x,TRFave_match(:,k,j));   hold on;
         plot(x,TRFave_unmatch(:,k,j)); hold on;
         scatter(x(maxind_match(:,k,j)),   max_match(:,k,j),   "filled"); hold on;
@@ -148,6 +151,51 @@ for k = 1:numCh
 end
 
 legend("matched ave","unmatched ave", "max for matched", "max for unmatched", 'Location','best')
+lgd = legend;
+lgd.Layout.Tile = 'east';
 sgtitle(sprintf('TRF average (%d sub) and peaks %s', Snum, subjectlist),'interpreter', "latex")
 filename_pdf = strcat(outfolder_mTRFfig_step7, sprintf('TRFave_%s', subjectlist), '.pdf');
 saveas(gcf, filename_pdf)
+
+%% Jackknife figures
+
+%%% Jackknife
+fs = length(x)/(x(end)-x(1))*1000; %sampling frequency (Hz)
+% t_stt = peakrangeJK(1)/1000; %peakrange should be sesond, not ms
+% t_end = peakrangeJK(2)/1000;
+
+figure('Position', [100 100 800 600]);
+
+co = 0;
+for k = 1:numCh
+    for j =1: numTag-1 %except mix
+
+        co = co+1;
+        % subplot(2,2,co)
+        nexttile;
+        %%% Jackknife calculation and plot
+        [tscore(k,j), TRF_JK_mt(:,:,i,j), TRF_JK_um(:,:,k,j), PeakJK_mt(:,k,j), PeakindJK_mt(:,k,j), PeakJK_um(:,k,j), PeakindJK_um(:,k,j)] = jackknife_comp_v1(TRFs_match(:,:,k,j)', TRFs_unmatch(:,:,k,j)', fs, x, peakrangeJK(1), peakrangeJK(2)); 
+        %index: TRF_JK_mt(TRF samples, subject, stimuli, channel)
+
+        scatter(x(PeakindJK_mt(:,k,j)), PeakJK_mt(:,k,j), "filled"); hold on;
+        scatter(x(PeakindJK_um(:,k,j)), PeakJK_um(:,k,j), "filled"); hold on;
+        yline(0); hold on;
+        xline(0); hold on;
+
+        title(strcat(chs(k), " " ,instruction(j), " stimulus, t = ", string(tscore(k,j))))
+        xlim(xrange) 
+        xlabel('Time lag (ms)');
+        ylim(yrange);
+        ylabel('Amplitude (a.u.)')
+        grid on;
+
+    end
+end
+
+legend("matched", "unmatched", "matched std err", "unmatched std err", "peaks of matched", "peaks of unmatched", 'Location','bestoutside')
+lgd = legend;
+lgd.Layout.Tile = 'east';
+sgtitle(sprintf('TRF Jackknifed average (%d sub) and peaks %s', Snum, subjectlist),'interpreter', "latex")
+filename_pdf = strcat(outfolder_mTRFfig_step7, sprintf('TRFJKave_%s', subjectlist), '.pdf');
+saveas(gcf, filename_pdf)
+

@@ -54,7 +54,7 @@ xticklabels;
 set(gcf,'position',[1   216   560   420]);
 %sh
 
-CAkeyboard;
+keyboard;
 
 close all;
 
@@ -124,7 +124,13 @@ shorteststs = 1.5; %minimum start time (sec)
 numCh = length(allchs);
 if numCh == 20 %DSI-24
     disp('Device: DSI-24')
-    locs    = struct2table(readlocs('LocationFiles/DSI-24 Channel Locations w.ced')); %channel configuration file for numCh channels (DSI-24)   
+    locstemp    = readlocs('LocationFiles/DSI-24 Channel Locations w.ced'); %channel configuration file for numCh channels (DSI-24)
+    locstable = struct2table(locstemp); %swap X and Y
+    temp = locstable.X;
+    locstable.X = locstable.Y;
+    locstable.Y = temp;
+    locstable.theta = locstable.theta + 90;
+    locs=table2struct(locstable);
     Hotch = [4 8]; % Fz and Cz
     Coldch = [14 15]; % O1 and O2
 else %Biosemi

@@ -1,5 +1,5 @@
-%%% mTRF analysis - step 5 mTRF model generation for various stimuli length - nonsub -> use raw data of all the cannels %%% 
-%%% - evoked responce, use all channels, two instructions version
+%%% mTRF analysis - step 5 mTRF model generation for various stimuli length - nonsub -> use raw data of all the channels %%% 
+%%% - evoked responce (individuals), use all channels, two instructions version
 %%%
 %%% required Add-ons
 %%% - 
@@ -21,6 +21,7 @@
 %%% v4
 %%% 20231207 two instructions 'experiment_mTRF_feasibility_v4.m'
 %%% 20240222 ICA option
+%%% v5
 
 clearvars; 
 close all;
@@ -132,7 +133,7 @@ instruction = ["Left", "Right"];
 
 fs_New = 128;
 
-%% mTRf processing
+%% mTRF processing
 
 for i = 1:length(inst_flg)
     for j =1:size(stim,3)

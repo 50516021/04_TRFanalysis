@@ -23,17 +23,24 @@
 %%% v6
 %%% 20240216 sliced short term processing
 %%% 20240222 ICA option
+%%% 20240320 save TRF data
 
 clearvars; 
 close all;
+
+%%%% options %%%%
+
+Opt_ICA = 1; %use ICA data (1) or not (0)
+
+%%%%%%%%%%%%%%%%%
+
 
 addpath('../'); %add path above
 addpath('../../02_EEGanalysis'); %add path of EEGanalysis
 
 OSflag = OSdetection_v1;
 
-ICAopt = 1; %use ICA data (1) or not (0)
-if ICAopt
+if Opt_ICA
     namekey = 'step4_plotdatav3_*';
     nameopt = "_ICA_";
 else      
@@ -52,7 +59,7 @@ prompt = 'Choose folder name:';  % prompt message
 experiment_name = folders.name{foldInd,:}; %subject (experiment) name
 outfolder =  sprintf('subject/%s/', experiment_name); %name of the output folder containing the subject's data 
 
-if ICAopt
+if Opt_ICA
     outfolder_mTRFfig = strcat(outfolder, 'mTRF_fig/');
     outfolder_mTRFmdl = strcat(outfolder, 'mTRF_mdl/');
 else
@@ -84,7 +91,7 @@ elseif OSflag(1) == "2" %Windows
     load([outfolder metadata_file]); %participant's responces
 end
 
-if ICAopt; epochs = saveEp; end %use subtracted (ICAed) epoch
+if Opt_ICA; epochs = saveEp; end %use subtracted (ICAed) epoch
 
 %% parameters
 
@@ -136,7 +143,7 @@ situations = ["matched", "unmatched"];
 
 fs_New = 128;
 
-%% mTRf processing and figure plot
+%% mTRF processing and figure plot
 
 outfolder_mTRFfig_short = strcat(outfolder_mTRFfig, "shortterm/");
 mkdir(outfolder_mTRFfig_short)
@@ -162,12 +169,13 @@ for i = 1:length(inst_flg)
                 
                 %%% model training
                 model = TRFestimation_v1(stim_wndw, fs_New, resp_wndw, fs_New, 0, 0);
-                if ICAopt
+                if Opt_ICA
                     [x, TRFs(:,l,i,j,k)] = mTRFplot_pros(model,'trf','all',k,TRFrange);
                 else
                     [x, TRFs(:,l,i,j,k)] = mTRFplot_pros(model,'trf','all',numch(k),TRFrange);
                 end
-                CFind = CFTrange(1)<=x & CFTrange<=x;
+                %index: TRFs([TRF samples], [windows], [instruction], [stimuli], [channel])
+                CFind = CFTrange(1)<=x & CFTrange<=x; %crest factor range 
                 CreFac(l,i,j,k) = peak2rms(TRFs(CFind,l,i,j,k));
             end
             
@@ -203,6 +211,12 @@ for i = 1:length(inst_flg)
         end    
     end
 end
+
+%% save TRF data 
+
+datadir_TRF = strcat(outfolder, "step5_v6_data");
+filename_data = strcat(datadir_TRF, sprintf('step5_v6_shortTRF%s%s_d%dgap%d', nameopt, experiment_name, windowsize, windowgap), '.mat');
+save(filename_data, 'x', 'TRFs', 'CreFac')
 
 %% plot crestfactor
 

@@ -136,7 +136,7 @@ grid on;
 xlim(xrange)
 xlabel('Time lag (ms)');
 xlabel('stimuli');
-ylabel('Subtraction between peak Maximum of TRF');
+ylabel('Subtraction of peak Maximum of TRFs');
 grid on;
 wholetitle = strcat("Subtraction of TRF peaks: ", experiment_name);
 sgtitle(wholetitle,'interpreter', "latex")
@@ -174,7 +174,7 @@ saveas(gcf, filename_pdf)
 
 %% save SNR data 
 
-filename_data = strcat(outfolder, sprintf('step6_matchTRF', nameopt, '%s', experiment_name), '.mat');
+filename_data = strcat(outfolder, sprintf('step6_matchTRF%s%s', nameopt, experiment_name), '.mat');
 save(filename_data, 'x', 'TRF_match', 'TRF_unmatch')
 
 %% mTRF processing for plot function
