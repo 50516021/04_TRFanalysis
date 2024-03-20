@@ -187,7 +187,7 @@ for i = 1:length(inst_flg)
                     [x, TRFs(:,l,i,j,k)] = mTRFplot_pros(model,'trf','all',numch(k),TRFrange);
                 end
                 %index: TRFs([TRF samples], [windows], [instruction], [stimuli], [channel])
-                CFind = CFTrange(1)<=x & CFTrange<=x; %crest factor range 
+                CFind = CFTrange(1)<=x & CFTrange(2)<=x; %crest factor range 
                 CreFac(l,i,j,k) = peak2rms(TRFs(CFind,l,i,j,k));
             end
             
@@ -196,7 +196,7 @@ for i = 1:length(inst_flg)
             % clims = [max(max(max(max(max(TRFs))))) min(min(min(min(min(TRFs)))))];
             
             %%% plot colormap %%%
-            subplot(Num_Ch/4,4,k)
+            subplot(Num_Ch/5,5,k)
 
             imagesc(squeeze(TRFs(:,:,i,j,k)),clims)
             colorbar
@@ -217,6 +217,7 @@ for i = 1:length(inst_flg)
             title(ch_list_ref{k})
 
         end   
+        set(gcf,'position',[700 605 1200 960])
         sgtitle(sprintf('mTRF stimulus: %s, inst: %s, window size:%2.0fs (gap:%2.1fs) ', stim_tag(j), instruction(i), windowsize, windowgap),'interpreter', "latex")     
         filename = sprintf('mTRF_sliced_wd%dgap%d%s_inst%s',windowsize, windowgap, stim_tag(j), instruction(i));
         filename_pdf = strcat(outfolder_mTRFfig_short, filename, nameopt, '.pdf');

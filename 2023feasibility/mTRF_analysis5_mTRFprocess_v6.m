@@ -175,7 +175,7 @@ for i = 1:length(inst_flg)
                     [x, TRFs(:,l,i,j,k)] = mTRFplot_pros(model,'trf','all',numch(k),TRFrange);
                 end
                 %index: TRFs([TRF samples], [windows], [instruction], [stimuli], [channel])
-                CFind = CFTrange(1)<=x & CFTrange<=x; %crest factor range 
+                CFind = CFTrange(1)<=x & CFTrange(2)<=x; %crest factor range 
                 CreFac(l,i,j,k) = peak2rms(TRFs(CFind,l,i,j,k));
             end
             
