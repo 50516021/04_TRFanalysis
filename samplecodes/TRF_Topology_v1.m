@@ -13,6 +13,8 @@
 
 function [] = TRF_Topology_v1(TRFdata)
 
+%index: TRFdata([TRF samples], [windows], [instruction], [stimuli], [channel], [subj])
+
 addpath('../../02_EEGanalysis'); %add path of EEGanalysis for Location file
 
 caxis = [-1.2 1.2];

@@ -214,8 +214,7 @@ end
 
 %% save TRF data 
 
-datadir_TRF = strcat(outfolder, "step5_v6_data");
-filename_data = strcat(datadir_TRF, sprintf('step5_v6_shortTRF%s%s_d%dgap%d', nameopt, experiment_name, windowsize, windowgap), '.mat');
+filename_data = strcat(outfolder, sprintf('step5_v6_shortTRF%s%s_d%dgap%d', nameopt, experiment_name, windowsize, windowgap), '.mat');
 save(filename_data, 'x', 'TRFs', 'CreFac')
 
 %% plot crestfactor

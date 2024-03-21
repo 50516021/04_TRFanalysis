@@ -77,11 +77,10 @@ for i = 1:Snum
 
 end
 
-num_window = size(TRFs,2);
-TRFs_match(:,:,1,:,:)     = TRFs(:,:,1,1,:,:); 
-TRFs_match(:,:,2,:,:)     = TRFs(:,:,2,2,:,:); 
-TRFs_unmatch(:,:,1,:,:)   = TRFs(:,:,2,1,:,:); 
-TRFs_unmatch(:,:,2,:,:)   = TRFs(:,:,1,2,:,:); 
+
+TRFs_match(:,:,1,:,:)   = TRFs(:,:,1,1,:,:); 
+TRFs_match(:,:,2,:,:)   = TRFs(:,:,2,2,:,:); 
+TRFs_unmatch(i,:,:,:) = TRF_unmatch; 
 
 %% load sensor location file
 

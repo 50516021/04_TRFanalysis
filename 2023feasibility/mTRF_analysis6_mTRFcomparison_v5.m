@@ -230,8 +230,9 @@ end
 
 %% save TRF data 
 
-filename_data = sprintf('step6_v5_shortTRF%s%s_d%dgap%d.mat', nameopt, experiment_name, windowsize, windowgap);
+filename_data = sprintf('%sstep6_v5_shortTRF%s%s_d%dgap%d.mat', outfolder, nameopt, experiment_name, windowsize, windowgap);
 save(filename_data, 'x', 'TRFs', 'CreFac', 'ch_ind_ref', 'Num_Ch_ref', 'ch_list_ref')
+disp(strcat(experiment_name, ' has been proccessed'))
 
 %% stimulus preparation function %%%
 function [stimulus, fs_t] = stimGen(path_Tgt, timerange_Tgt, path_Msk, timerange_Msk)
