@@ -191,9 +191,10 @@ for i = 1:length(inst_flg)
                 CreFac(l,i,j,k) = peak2rms(TRFs(CFind,l,i,j,k));
             end
             
-            if  k == 1; clims = [-8 9]*10^(-4);
-            else ;      clims = [-7 8]*10^(-4); end %color bar rnage
+%             if  k == 1; clims = [-8 9]*10^(-4);
+%             else ;      clims = [-7 8]*10^(-4); end %color bar rnage
             % clims = [max(max(max(max(max(TRFs))))) min(min(min(min(min(TRFs)))))];
+            clims = [-7 8]*10^(-4);
             
             %%% plot colormap %%%
             subplot(Num_Ch/5,5,k)
