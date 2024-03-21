@@ -217,12 +217,12 @@ for i = 1:length(inst_flg)
             title(ch_list_ref{k})
 
         end   
-        set(gcf,'position',[400 300 700 480])
+        % set(gcf,'position',[400 300 700 480])
         sgtitle(sprintf('mTRF stimulus: %s, inst: %s, window size:%2.0fs (gap:%2.1fs) ', stim_tag(j), instruction(i), windowsize, windowgap),'interpreter', "latex")     
         filename = sprintf('mTRF_sliced_wd%dgap%d%s_inst%s',windowsize, windowgap, stim_tag(j), instruction(i));
         filename_pdf = strcat(outfolder_mTRFfig_short, filename, nameopt, '.pdf');
-        % saveas(gcf, filename_pdf)
-        print(filename_pdf,'-dpdf','-fillpage')
+        saveas(gcf, filename_pdf)
+        % print(filename_pdf,'-dpdf','-fillpage')
         disp(strcat(filename, ' figure has been saved'))
     end
 end
