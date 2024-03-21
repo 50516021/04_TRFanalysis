@@ -229,9 +229,7 @@ end
 
 %% save TRF data 
 
-datadir_TRF = strcat(outfolder, "step6_v5_data");
-mkdir(datadir_TRF)
-filename_data = strcat(datadir_TRF, sprintf('step6_v5_shortTRF%s%s_d%dgap%d', nameopt, experiment_name, windowsize, windowgap), '.mat');
+filename_data = sprintf('step6_v5_shortTRF%s%s_d%dgap%d.mat', nameopt, experiment_name, windowsize, windowgap);
 save(filename_data, 'x', 'TRFs', 'CreFac', 'ch_ind_ref', 'Num_Ch_ref', 'ch_list_ref')
 
 %% stimulus preparation function %%%
