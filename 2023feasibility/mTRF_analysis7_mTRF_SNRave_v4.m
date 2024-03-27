@@ -17,6 +17,7 @@
 %%% v4 
 %%% 20240221 subtraction plot from step6 v4
 %%% 20240313 Jacknife
+%%% 20240327 A1A2 re-referencing option
 
 clearvars; 
 close all;
@@ -44,9 +45,33 @@ peakrangeJK = peakrange; %peak range for Jackknife
 outfolder_mTRFfig_step7 = strcat(figurepath, 'step7/');
 mkdir(outfolder_mTRFfig_step7)
 
+%% options
+
+%%% reference %%%
+refOpt = ["O1O2" "A1A2"]; %options of onsets
+prompt = 'Chose re-referencing cannel:';  % prompt message
+[refInd,tf] = listdlg('PromptString',prompt,'SelectionMode','single','ListSize',[200 200],'ListString',refOpt); % option selection window
+refCh = refOpt(refInd);
+
+%%% option %%%
+ICAopt = 1; %use ICA data (1) or not (0)
+%%%%%%%%%%%%%%
+
+if ICAopt
+    if refInd == 1 %O1 and O2
+        namekey = 'step6_matchTRF_ICA_O1O2*'; %O1 and O2
+    elseif refInd == 2
+        namekey = 'step6_matchTRF_ICA_A1A2*'; %A1 and A2
+    end  
+    nameopt = "_ICA_";
+else      
+    namekey = 'step6_matchTRF_s*';   
+    nameopt = "_";
+end
+
 %% load list
 
-subjectlist = "subjlist_mTRF_ver20231224";
+subjectlist = "subjlist_mTRF_ver20240327";
 filesubject = strcat('subjectlist/', subjectlist, '.csv');
 listname = string(extractBetween(filesubject, '/', '.csv'));
 opts = detectImportOptions(filesubject);
@@ -58,13 +83,16 @@ Snum = size(subList,1);
 filenames = {};
 for i = 1:Snum
     %%%get folder name
-    folder = struct2table(dir(strcat('subject/s000', string(subList.ID(i)), '*')));
+    if     subList.ID(i) <  100; subdigit = 's000';    % determine subject's digit
+    elseif subList.ID(i) >= 100; subdigit = 's00'; end
+
+    folder = struct2table(dir(strcat('subject/', subdigit, string(subList.ID(i)), '*')));
     experiment_name = folder.name; %subject (experiment) name
     foldTemp =  string(sprintf('subject/%s/', experiment_name)); %name of the output folder containing the subject's data 
     filenames{i} = foldTemp;
 
     % load SNR data
-    TRFfile = ls(strcat(foldTemp, 'step6_matchTRF_ICA_s*')); %find responce file
+    TRFfile = ls(strcat(foldTemp, namekey)); %find responce file
     if OSflag(1) == "1"   %MacOS
         TRFfile = TRFfile(1:end-1); %extract unnecessary charactar
     elseif OSflag(1) == "2" %Windows

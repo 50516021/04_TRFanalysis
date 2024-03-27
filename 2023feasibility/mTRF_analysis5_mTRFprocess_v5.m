@@ -161,9 +161,7 @@ for i = 1:length(inst_flg)
             TRFestimation_v1(stim_ext(:,:,j), fs_New, resp, fs_New, k, model);
 
             sgtitle(sprintf('mTRF stimulus: %s,inst: %s, %s ', stim_tag(j), instruction(i), chs(k)))
-            filename_pdf = strcat(outfolder_mTRFfig, filename, nameopt, refCh, ...
-                ...
-               chs(k), '.pdf');
+            filename_pdf = strcat(outfolder_mTRFfig, filename, nameopt, refCh, chs(k), '.pdf');
             saveas(gcf, filename_pdf)
             disp(strcat(filename, ' figure has been saved'))
 

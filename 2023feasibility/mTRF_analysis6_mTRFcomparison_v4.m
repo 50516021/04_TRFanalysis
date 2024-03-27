@@ -35,7 +35,10 @@ prompt = 'Chose re-referencing cannel:';  % prompt message
 [refInd,tf] = listdlg('PromptString',prompt,'SelectionMode','single','ListSize',[200 200],'ListString',refOpt); % option selection window
 refCh = refOpt(refInd);
 
+%%% option %%%
 ICAopt = 1; %use ICA data (1) or not (0)
+%%%%%%%%%%%%%%
+
 if ICAopt
     if refInd == 1 %O1 and O2
         namekey = 'step4_plotdatav3_refO1O2*'; %O1 and O2
@@ -105,7 +108,11 @@ for k = 1:numCh
         for l = 1:length(inst_flg)
 
             filename = sprintf('mTRF_%s_inst%s', stim_tag(j), instruction(l));
-            filename_mdl = strcat(outfolder_mTRFmdl, 'model', nameopt, filename, '.mat');
+            if refInd == 1 
+                filename_mdl = strcat(outfolder_mTRFmdl, 'model', nameopt, filename, '.mat');
+            elseif refInd == 2
+                filename_mdl = strcat(outfolder_mTRFmdl, 'model', nameopt, refCh, filename, '.mat');
+            end
             load(filename_mdl);
             disp(strcat(filename, ' has been loaded'))
             [x, y] = mTRFplot_pros(model,'trf','all',k,[-50,350]);
@@ -185,7 +192,7 @@ saveas(gcf, filename_pdf)
 
 %% save SNR data 
 
-filename_data = strcat(outfolder, sprintf('step6_matchTRF%s%s_%s', nameopt, experiment_name, refCh), '.mat');
+filename_data = strcat(outfolder, sprintf('step6_matchTRF%s%s_%s', nameopt, refCh, experiment_name), '.mat');
 save(filename_data, 'x', 'TRF_match', 'TRF_unmatch')
 
 %% mTRF processing for plot function
