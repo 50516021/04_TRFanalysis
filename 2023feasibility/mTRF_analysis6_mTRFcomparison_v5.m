@@ -34,7 +34,6 @@ Opt_ICA = 1; %use ICA data (1) or not (0)
 %%%%%%%%%%%%%%%%%
 
 addpath('../'); %add path above for functions
-Locationfile_path = '../../02_EEGanalysis/LocationFiles/';
 
 OSflag = OSdetection_v1;
 
@@ -49,7 +48,7 @@ end
 %% load location file
 eeglab
 
-locstemp     = readlocs([Locationfile_path, 'DSI-24 Channel Locations w.ced']); %channel configuration file for numCh channels (DSI-24)
+locstemp     = readlocs('../LocationFiles/DSI-24 Channel Locations w.ced'); %channel configuration file for numCh channels (DSI-24)
 ch_list_temp = struct2table(locstemp);
 ch_list_orgn = cellstr(ch_list_temp.labels);
 
