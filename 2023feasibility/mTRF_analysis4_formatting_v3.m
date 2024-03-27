@@ -17,6 +17,7 @@
 %%% 20231129 also for v4
 %%% v3
 %%% 20240222 use the data from step3 (artremove)
+%%% 20240327 re-referenceing of A1 and A2
 
 clearvars; close all;
 
@@ -76,14 +77,26 @@ end
     % 16..O2 (DSI-24>15..O2)
 if size(epochs,2) == 20 %DSI-24
     disp('Device: DSI-24')
+
+    %%% reference %%%
+    refOpt = ["O1O2" "A1A2"]; %options of onsets
+    prompt = 'Chose re-referencing cannel:';  % prompt message
+    [refInd,tf] = listdlg('PromptString',prompt,'SelectionMode','single','ListSize',[200 200],'ListString',refOpt); % option selection window
+
+    if refInd == 1 %O1 and O2
+        Coldch = [14 15]; %O1 and O2
+    elseif refInd == 2
+        Coldch = [9 18]; %A1 and A2
+    end
+
     Hotch = [4 8]; % Fz and Cz
-    Coldch = [14 15]; % O1 and O2
 else %Biosemi
     disp('Device: Biosemi')
     Hotch = [4 8]; % Fz and Cz
     Coldch = [14 16]; % O1 and O2
 end
 
+refCh = refOpt(refInd);
 ch1 = 'Fz';
 ch2 = 'Cz';
 
@@ -100,7 +113,7 @@ saveEp = plotEp;
 %% save proccessed data
 fs_EEG = fs;
 date = datestr(now,'yyyymmdd');
-save_filename = strcat(outfolder, 'step4_plotdatav3_', date, '_',  experiment_name, '.mat');
+save_filename = strcat(outfolder, 'step4_plotdatav3_ref', refCh, '_', date, '_',  experiment_name, '.mat');
 save(save_filename,'saveEp', 'epochs', 'fs_EEG');
 disp(strcat(save_filename, ' has been saved'))
 

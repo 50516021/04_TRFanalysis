@@ -1,4 +1,4 @@
-%%% mTRF analysis - step 5 mTRF model generation for various stimuli length v6%%% 
+%%% mTRF analysis - step 5 mTRF model generation for various stimuli length v6 %%% 
 %%% - evoked responce, use all channels, two instructions version
 %%%
 %%% required Add-ons

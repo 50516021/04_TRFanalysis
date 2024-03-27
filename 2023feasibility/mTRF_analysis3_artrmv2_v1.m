@@ -119,18 +119,18 @@ save(strcat(outfolder, 'step3_epochs_', data_name, '_ICAprocessedAfterRejections
     % 16..O2 (DSI-24>15..O2)
 baselinedur = 0.3; %duration of baseline (sec)
 shorteststs = 1.5; %minimum start time (sec)
-
+    
 %read location files
 numCh = length(allchs);
 if numCh == 20 %DSI-24
     disp('Device: DSI-24')
-    locstemp    = readlocs('LocationFiles/DSI-24 Channel Locations w.ced'); %channel configuration file for numCh channels (DSI-24)
+    locstemp  = readlocs('LocationFiles/DSI-24 Channel Locations w.ced'); %channel configuration file for numCh channels (DSI-24)
     locstable = struct2table(locstemp); %swap X and Y
     temp = locstable.X;
     locstable.X = locstable.Y;
     locstable.Y = temp;
     locstable.theta = locstable.theta + 90;
-    locs=table2struct(locstable);
+    locs=locstable;
     Hotch = [4 8]; % Fz and Cz
     Coldch = [14 15]; % O1 and O2
 else %Biosemi
@@ -194,4 +194,4 @@ legend(legends(:), 'location', 'southeast');
 saveas(gcf, strcat(outfolder, 'step3_', data_name, '_evokedWaveforms_BeforeAndAfterICAafterRejections_simple_byIC.pdf'))
 
 disp(['----- Processed: ' char(data_name), ' -----']) %make sure the processed data
-
+    

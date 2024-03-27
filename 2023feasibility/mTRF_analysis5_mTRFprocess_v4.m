@@ -21,7 +21,6 @@
 %%% 20231014 load common stim file for mTRFpilot_v2 experiments (fs fixed)
 %%% v4
 %%% 20231101 time slice
-%%% 20240222 ICA option
 
 clearvars; 
 close all;

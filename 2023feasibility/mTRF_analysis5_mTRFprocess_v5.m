@@ -1,4 +1,4 @@
-%%% mTRF analysis - step 5 mTRF model generation for various stimuli length - nonsub -> use raw data of all the channels %%% 
+%%% mTRF analysis - step 5 mTRF model generation for various stimuli length - nonsub -> use raw data of all the channels  v5 %%% 
 %%% - evoked responce (individuals), use all channels, two instructions version
 %%%
 %%% required Add-ons
@@ -20,8 +20,8 @@
 %%% 20231129 nonsub - raw data
 %%% v4
 %%% 20231207 two instructions 'experiment_mTRF_feasibility_v4.m'
-%%% 20240222 ICA option
 %%% v5
+%%% 20240222 ICA option
 
 clearvars; 
 close all;
@@ -31,9 +31,19 @@ addpath('../../02_EEGanalysis'); %add path of EEGanalysis
 
 OSflag = OSdetection_v1;
 
+%%% reference %%%
+refOpt = ["O1O2" "A1A2"]; %options of onsets
+prompt = 'Chose re-referencing cannel:';  % prompt message
+[refInd,tf] = listdlg('PromptString',prompt,'SelectionMode','single','ListSize',[200 200],'ListString',refOpt); % option selection window
+refCh = refOpt(refInd);
+
 ICAopt = 1; %use ICA data (1) or not (0)
 if ICAopt
-    namekey = 'step4_plotdatav3_*';
+    if refInd == 1 %O1 and O2
+        namekey = 'step4_plotdatav3_refO1O2*'; %O1 and O2
+    elseif refInd == 2
+        namekey = 'step4_plotdatav3_refA1A2*'; %A1 and A2
+    end  
     nameopt = "_ICA_";
 else      
     namekey = 'step4_plotdata_*';   
@@ -41,7 +51,6 @@ else
 end
 
 Hotch = [4 8]; % Fz and Cz
-Coldch = [14 15]; % O1 and O2
 
 %% parameters
 %%%get folder name
@@ -143,7 +152,7 @@ for i = 1:length(inst_flg)
         %%% model training
         model = TRFestimation_v1(stim_ext(:,:,j), fs_New, resp, fs_New, 0, 0);
         filename = sprintf('mTRF_%s_inst%s', stim_tag(j), instruction(i));
-        filename_mdl = strcat(outfolder_mTRFmdl, 'model', nameopt,  filename, '.mat');
+        filename_mdl = strcat(outfolder_mTRFmdl, 'model', nameopt, refCh, filename, '.mat');
         save(filename_mdl,'model');
 
         %%% mTRF estimation (figure)
@@ -152,7 +161,9 @@ for i = 1:length(inst_flg)
             TRFestimation_v1(stim_ext(:,:,j), fs_New, resp, fs_New, k, model);
 
             sgtitle(sprintf('mTRF stimulus: %s,inst: %s, %s ', stim_tag(j), instruction(i), chs(k)))
-            filename_pdf = strcat(outfolder_mTRFfig, filename, nameopt, chs(k), '.pdf');
+            filename_pdf = strcat(outfolder_mTRFfig, filename, nameopt, refCh, ...
+                ...
+               chs(k), '.pdf');
             saveas(gcf, filename_pdf)
             disp(strcat(filename, ' figure has been saved'))
 

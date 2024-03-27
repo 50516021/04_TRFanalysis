@@ -6,7 +6,7 @@
 %%% - 
 %%% required functions
 %%% - 
-%%%thi
+%%%
 %%% required setting files
 %%% - 
 
@@ -19,6 +19,7 @@
 %%% v4
 %%% 20240220 peak comparison
 %%% 20240227 ICA option
+%%% 20240327 re-referenceing of A1 and A2
 
 clearvars; 
 close all;
@@ -28,9 +29,19 @@ addpath('../../02_EEGanalysis'); %add path of EEGanalysis
 
 OSflag = OSdetection_v1;
 
+%%% reference %%%
+refOpt = ["O1O2" "A1A2"]; %options of onsets
+prompt = 'Chose re-referencing cannel:';  % prompt message
+[refInd,tf] = listdlg('PromptString',prompt,'SelectionMode','single','ListSize',[200 200],'ListString',refOpt); % option selection window
+refCh = refOpt(refInd);
+
 ICAopt = 1; %use ICA data (1) or not (0)
 if ICAopt
-    namekey = 'step4_plotdatav3_*';
+    if refInd == 1 %O1 and O2
+        namekey = 'step4_plotdatav3_refO1O2*'; %O1 and O2
+    elseif refInd == 2
+        namekey = 'step4_plotdatav3_refA1A2*'; %A1 and A2
+    end  
     nameopt = "_ICA_";
 else      
     namekey = 'step4_plotdata_*';   
@@ -140,7 +151,7 @@ ylabel('Subtraction of peak Maximum of TRFs');
 grid on;
 wholetitle = strcat("Subtraction of TRF peaks: ", experiment_name);
 sgtitle(wholetitle,'interpreter', "latex")
-filename_pdf = strcat(outfolder_mTRFfig_step6, sprintf('TRFpeaksubq_%s', experiment_name), '.pdf');
+filename_pdf = strcat(outfolder_mTRFfig_step6, sprintf('TRFpeaksubq_%s_%s', experiment_name, refCh), '.pdf');
 saveas(gcf, filename_pdf)
 
 %% TRF figures
@@ -169,12 +180,12 @@ end
 
 legend("matched","unmatched", "max for matched", 'Location','best')
 sgtitle(sprintf('TRF peaks %s', experiment_name),'interpreter', "latex")
-filename_pdf = strcat(outfolder_mTRFfig_step6, sprintf('TRF%s%s',nameopt, experiment_name), '.pdf');
+filename_pdf = strcat(outfolder_mTRFfig_step6, sprintf('TRF%s%s_%s',nameopt, experiment_name, refCh), '.pdf');
 saveas(gcf, filename_pdf)
 
 %% save SNR data 
 
-filename_data = strcat(outfolder, sprintf('step6_matchTRF%s%s', nameopt, experiment_name), '.mat');
+filename_data = strcat(outfolder, sprintf('step6_matchTRF%s%s_%s', nameopt, experiment_name, refCh), '.mat');
 save(filename_data, 'x', 'TRF_match', 'TRF_unmatch')
 
 %% mTRF processing for plot function

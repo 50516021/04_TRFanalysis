@@ -65,27 +65,28 @@ for i = 1:Snum
     filenames{i} = foldTemp;
 
     % load SNR data
-    TRFfile = ls(strcat(foldTemp, ['step6_v5_shortTRF_ICA_s000', Snum_str, '_20231225_mTRFpilot_v406_d240gap10'])); %find responce file
+    TRFfile = ls(strcat(foldTemp, ['step6_v5_shortTRF_ICA_s000', char(Snum_str), '*'])); %find responce file
     if OSflag(1) == "1"   %MacOS
         TRFfile = TRFfile(1:end-1); %extract unnecessary charactar
     elseif OSflag(1) == "2" %Windows
         TRFfile = [foldTemp TRFfile];
     end
     load(TRFfile)
-    TRFdata(:,:,:,:,i)   = TRFs;
+    TRFdata(:,:,:,:,:,i)   = TRFs;
     %index: TRFdata([TRF samples], [windows], [instruction], [stimuli], [channel], [subj])
 
 end
 
 num_window = size(TRFs,2);
-TRFs_match(:,:,1,:,:)     = TRFs(:,:,1,1,:,:); 
-TRFs_match(:,:,2,:,:)     = TRFs(:,:,2,2,:,:); 
-TRFs_unmatch(:,:,1,:,:)   = TRFs(:,:,2,1,:,:); 
-TRFs_unmatch(:,:,2,:,:)   = TRFs(:,:,1,2,:,:); 
+TRFs_match(:,:,1,:,:)   = TRFs(:,:,1,1,:,:); 
+TRFs_match(:,:,2,:,:)   = TRFs(:,:,2,2,:,:); 
+TRFs_unmatch(:,:,1,:,:) = TRFs(:,:,2,1,:,:); 
+TRFs_unmatch(:,:,2,:,:) = TRFs(:,:,1,2,:,:); 
+%index: TRFs_match([TRF samples], [windows], [stimuli], [channel], [subj])
 
 %% load sensor location file
 
-locstemp    = readlocs('../LocationFiles/DSI-24 Channel Locations w.ced'); %channel configuration file for numCh channels (DSI-24)
+locstemp  = readlocs('../LocationFiles/DSI-24 Channel Locations w.ced'); %channel configuration file for numCh channels (DSI-24)
 locstable = struct2table(locstemp); %swap X and Y
 temp = locstable.X;
 locstable.X = locstable.Y;
@@ -93,84 +94,6 @@ locstable.Y = temp;
 locstable.theta = locstable.theta + 90; %lotate
 locs=table2struct(locstable);
 locs = locs(ch_ind_ref); %channels afetr re-referensing
-
-%% peak ratio figures
-
-%%% peak picking
-for i = 1:Snum
-    for k = 1:numCh
-        for j =1: numTag-1 %except mix
-            [max_match(i,k,j), maxind_match(i,k,j)]       = max(TRFs_match(i, logical((peakrange(1)<x).*(x<peakrange(2))),k,j)); %only in the case x>0 
-            maxind_match(i,k,j)                           = maxind_match(i,k,j) + sum(x<=peakrange(1)); %x must be adjusted
-            value_unmatch(i,k,j)                          = max(TRFs_unmatch(i, maxind_match(i,k,j),k,j));  
-            [max_unmatch(i,k,j),  maxind_unmatch(i,k,j)]  = max(TRFs_unmatch(i, logical((peakrange(1)<x).*(x<peakrange(2))),k,j)); %only in the case x>0 
-            maxind_unmatch(i,k,j)                         = maxind_unmatch(i,k,j) + sum(x<=peakrange(1)); %x must be adjusted
-            MaxRatio_plot(i,k, j)                         = max_match(i,k,j)-value_unmatch(i,k,j); %subttraction between matched and unmatched
-        end
-    end
-end
-
-figure;
-for k = 1:numCh
-    for j =1:numTag-1 %except mix
-        scatter(x(maxind_match(:,k,j)), MaxRatio_plot(:,k,j), "filled"); hold on;
-        legends(k,j) = strcat(chs(k), " ", instruction(j), "stim");
-    end
-end
-
-xline(0); hold on;
-legend(legends)
-grid on;
-xlim(xrange)
-xlabel('Time lag (ms)');
-xlabel('stimuli');
-ylabel('Subtraction between peak Maximum of TRF');
-grid on;
-wholetitle = strcat("Subtraction of TRF peaks: ", subjectlist);
-sgtitle(wholetitle,'interpreter', "latex")
-filename_pdf = strcat(outfolder_mTRFfig_step7, sprintf('TRFpeaksub_%s', subjectlist), '.pdf');
-saveas(gcf, filename_pdf)
-
-%% TRF figures
-
-%%% average TRF
-for k = 1:numCh
-    for j =1: numTag-1 %except mix
-        TRFave_match(:,k,j)   = mean(TRFs_match(:,:,k,j));
-        TRFave_unmatch(:,k,j) = mean(TRFs_unmatch(:,:,k,j));
-    end
-end
-
-figure('Position', [100 100 800 600]);
-
-co = 0;
-for k = 1:numCh
-    for j =1: numTag-1 %except mix
-        co = co+1;
-        % subplot(2,2,co)
-        nexttile;
-        plot(x,TRFave_match(:,k,j));   hold on;
-        plot(x,TRFave_unmatch(:,k,j)); hold on;
-        scatter(x(maxind_match(:,k,j)),   max_match(:,k,j),   "filled"); hold on;
-        scatter(x(maxind_unmatch(:,k,j)), max_unmatch(:,k,j), "filled"); hold on;
-        yline(0); hold on;
-        xline(0); hold on;
-
-        title(strcat(chs(k), " " ,instruction(j), " stimulus"))
-        xlim(xrange)
-        xlabel('Time lag (ms)');
-        ylim(yrange);
-        ylabel('Amplitude (a.u.)')
-        grid on;
-    end
-end
-
-legend("matched ave","unmatched ave", "max for matched", "max for unmatched", 'Location','best')
-lgd = legend;
-lgd.Layout.Tile = 'east';
-sgtitle(sprintf('TRF average (%d sub) and peaks %s', Snum, subjectlist),'interpreter', "latex")
-filename_pdf = strcat(outfolder_mTRFfig_step7, sprintf('TRFave_%s', subjectlist), '.pdf');
-saveas(gcf, filename_pdf)
 
 %% Jackknife figures
 
@@ -182,35 +105,72 @@ fs = length(x)/(x(end)-x(1))*1000; %sampling frequency (Hz)
 figure('Position', [100 100 800 600]);
 
 co = 0;
-for k = 1:numCh
+for k = 1:Num_Ch_ref
     for j =1: numTag-1 %except mix
+        for l = 1:num_window
 
-        co = co+1;
-        % subplot(2,2,co)
-        nexttile;
-        %%% Jackknife calculation and plot
-        [tscore(k,j), TRF_JK_mt(:,:,i,j), TRF_JK_um(:,:,k,j), PeakJK_mt(:,k,j), PeakindJK_mt(:,k,j), PeakJK_um(:,k,j), PeakindJK_um(:,k,j)] = jackknife_comp_v1(TRFs_match(:,:,k,j)', TRFs_unmatch(:,:,k,j)', fs, x, peakrangeJK(1), peakrangeJK(2)); 
-        %index: TRF_JK_mt(TRF samples, subject, stimuli, channel)
+            co = co+1;
+            % subplot(2,2,co)
+            nexttile;
+            %%% Jackknife calculation and plot
+            [tscore(k,j), TRF_JK_mt(:,:,l,k,j), TRF_JK_um(:,:,l,k,j), PeakJK_mt(:,l,k,j), PeakindJK_mt(:,l,k,j), PeakJK_um(:,l,k,j), PeakindJK_um(:,l,k,j)] ...
+                = jackknife_comp_v1(TRFs_match(:,l,j,k,:), TRFs_unmatch(:,l,j,k,:), fs, x, peakrangeJK(1), peakrangeJK(2)); 
+            %index: TRF_JK_mt(TRF samples, subject, stimuli, channel)
+    
+            % scatter(x(PeakindJK_mt(:,k,j)), PeakJK_mt(:,k,j), "filled"); hold on;
+            % scatter(x(PeakindJK_um(:,k,j)), PeakJK_um(:,k,j), "filled"); hold on;
+            % yline(0); hold on;
+            % xline(0); hold on;
+            % 
+            % title(strcat(chs(k), " " ,instruction(j), " stimulus, t = ", string(tscore(k,j))))
+            % xlim(xrange) 
+            % xlabel('Time lag (ms)');
+            % ylim(yrange);
+            % ylabel('Amplitude (a.u.)')
+            % grid on;
 
-        scatter(x(PeakindJK_mt(:,k,j)), PeakJK_mt(:,k,j), "filled"); hold on;
-        scatter(x(PeakindJK_um(:,k,j)), PeakJK_um(:,k,j), "filled"); hold on;
-        yline(0); hold on;
-        xline(0); hold on;
-
-        title(strcat(chs(k), " " ,instruction(j), " stimulus, t = ", string(tscore(k,j))))
-        xlim(xrange) 
-        xlabel('Time lag (ms)');
-        ylim(yrange);
-        ylabel('Amplitude (a.u.)')
-        grid on;
-
+        end
     end
 end
 
-legend("matched", "unmatched", "matched std err", "unmatched std err", "peaks of matched", "peaks of unmatched", 'Location','bestoutside')
-lgd = legend;
-lgd.Layout.Tile = 'east';
-sgtitle(sprintf('TRF Jackknifed average (%d sub) and peaks %s', Snum, subjectlist),'interpreter', "latex")
-filename_pdf = strcat(outfolder_mTRFfig_step7, sprintf('TRFJKave_%s', subjectlist), '.pdf');
-saveas(gcf, filename_pdf)
+% legend("matched", "unmatched", "matched std err", "unmatched std err", "peaks of matched", "peaks of unmatched", 'Location','bestoutside')
+% lgd = legend;
+% lgd.Layout.Tile = 'east';
+% sgtitle(sprintf('TRF Jackknifed average (%d sub) and peaks %s', Snum, subjectlist),'interpreter', "latex")
+% filename_pdf = strcat(outfolder_mTRFfig_step7, sprintf('TRFJKave_%s', subjectlist), '.pdf');
+% saveas(gcf, filename_pdf)
 
+
+%% part 2 - attentional modulation
+% DataLeft = rand([n_time_of_interest,n_ch,n_subj]);  % put your data [time of interest,channel,subj]
+% DataRight = rand([n_time_of_interest,n_ch,n_subj]); % put your data [time of interest,channel,subj]
+
+DataLeft = PeakJK_mt(:,l,k,j);
+DataRight = PeakJK_um(:,l,k,j);
+
+topoLeft = squeeze(mean(DataLeft));  % mean in the time of interest 
+topoRight = squeeze(mean(DataRight)); % mean in the time of interest
+
+for k=1:n_ch
+    [h1(k),p1(k),ci,stat] = ttest(topoLeft(k,:), topoRight(k,:));
+    tstat(k) = stat.tstat;
+end
+
+figure
+set(gcf,'position',[700 605 1000 195])
+subplot(1,4,1)
+topoplot(nanmean(topoLeft,2),locs,'maplimits',caxis,'whitebk','on')
+title(sprintf('Attended Left'))
+colorbar
+subplot(1,4,2)
+topoplot(nanmean(topoRight,2),locs,'maplimits',caxis,'whitebk','on')
+title(sprintf('Attended Right'))
+colorbar
+subplot(1,4,3)
+topoplot(tstat,locs,'maplimits',taxis,'whitebk','on')
+colorbar
+title('T score')
+subplot(1,4,4)
+topoplot(-log10(p1),locs,'maplimits',paxis,'whitebk','on')
+colorbar
+title('-log10(p)')
