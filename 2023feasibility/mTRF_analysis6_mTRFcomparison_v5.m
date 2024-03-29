@@ -6,7 +6,7 @@
 %%% - 
 %%% required functions
 %%% - 
-%%%thi
+%%%
 %%% required setting files
 %%% - 
 
@@ -20,30 +20,43 @@
 %%% 20240220 peak comparison
 %%% 20240227 ICA option
 %%% v5
-%%% 20240320 sliced short term processing (similer to step5-v6), all cannel
-%%% options for topology analysis
+%%% 20240320 sliced short term processing (similer to step5-v6), all channel
+%%% options for topology analysis -> need step4-v3 data
+%%% 20240327 re-referenceing of A1 and A2 (process all channels)
 
 clearvars; 
 close all;
 
-%%%% options %%%%
-
-Opt_ICA = 1; %use ICA data (1) or not (0)
-% Opt_Ch  = 1; %use only Fz and Cz(1) or all (2) -> refers (O1+O2)/2
-
-%%%%%%%%%%%%%%%%%
-
-addpath('../'); %add path above for functions
+addpath('../'); %add path above
+addpath('../../02_EEGanalysis'); %add path of EEGanalysis
 
 OSflag = OSdetection_v1;
 
-if Opt_ICA
-    namekey = 'step4_plotdatav3_*';
+%%% option %%%
+ICAopt = 1; %use ICA data (1) or not (0)
+%%%%%%%%%%%%%%
+
+%%% reference %%%
+refOpt = ["O1O2" "A1A2"]; %options of onsets
+prompt = 'Chose re-referencing cannel:';  % prompt message
+[refInd,tf] = listdlg('PromptString',prompt,'SelectionMode','single','ListSize',[200 200],'ListString',refOpt); % option selection window
+refCh = refOpt(refInd);
+
+if ICAopt
+    if refInd == 1 %O1 and O2
+        namekey = 'step4_plotdatav3_refO1O2*'; %O1 and O2
+        Coldch = [14 15]; % O1 and O2
+    elseif refInd == 2
+        namekey = 'step4_plotdatav3_refA1A2*'; %A1 and A2
+        Coldch = [9 18]; %A1 and A2
+    end  
     nameopt = "_ICA_";
 else      
     namekey = 'step4_plotdata_*';   
     nameopt = "_";
 end
+
+Hotch  = [4 8]; % Fz and Cz (don't change after removing cold channels)
 
 %% load location file
 eeglab
@@ -60,7 +73,7 @@ prompt = 'Choose folder name:';  % prompt message
 experiment_name = folders.name{foldInd,:}; %subject (experiment) name
 outfolder =  sprintf('subject/%s/', experiment_name); %name of the output folder containing the subject's data 
 
-if Opt_ICA
+if ICAopt
     outfolder_mTRFfig = strcat(outfolder, 'mTRF_fig/');
     outfolder_mTRFmdl = strcat(outfolder, 'mTRF_mdl/');
 else
@@ -92,7 +105,7 @@ elseif OSflag(1) == "2" %Windows
     load([outfolder metadata_file]); %participant's responces
 end
 
-% if Opt_ICA; epochs = saveEp; end %use subtracted (ICAed) epoch
+% if ICAopt; epochs = saveEp; end %use subtracted (ICAed) epoch
 
 
 %% parameters
@@ -138,8 +151,6 @@ end
 %% data preparation
 
 %%% Chanel info
-Hotch  = [4 8]; % Fz and Cz (don't change after removing cold channels)
-Coldch = [14 15]; % O1 and O2
 Num_Ch = size(epochs,2); %number of channels
 ch_ind_ref = 1:Num_Ch;
 ch_ind_ref(Coldch) = []; % index of channels afetr re-referensing
@@ -180,7 +191,7 @@ for i = 1:length(inst_flg)
                 
                 %%% model training
                 model = TRFestimation_v1(stim_wndw, fs_New, resp_wndw, fs_New, 0, 0);
-                if Opt_ICA
+                if ICAopt
                     [x, TRFs(:,l,i,j,k)] = mTRFplot_pros(model,'trf','all',k,TRFrange);
                 else
                     [x, TRFs(:,l,i,j,k)] = mTRFplot_pros(model,'trf','all',numch(k),TRFrange);
@@ -219,7 +230,7 @@ for i = 1:length(inst_flg)
         end   
         % set(gcf,'position',[400 300 700 480])
         sgtitle(sprintf('mTRF stimulus: %s, inst: %s, window size:%2.0fs (gap:%2.1fs) ', stim_tag(j), instruction(i), windowsize, windowgap),'interpreter', "latex")     
-        filename = sprintf('mTRF_sliced_wd%dgap%d%s_inst%s',windowsize, windowgap, stim_tag(j), instruction(i));
+        filename = sprintf('mTRF_sliced_ref%s_wd%dgap%d%s_inst%s',refCh, windowsize, windowgap, stim_tag(j), instruction(i));
         filename_pdf = strcat(outfolder_mTRFfig_short, filename, nameopt, '.pdf');
         saveas(gcf, filename_pdf)
         % print(filename_pdf,'-dpdf','-fillpage')
@@ -229,7 +240,7 @@ end
 
 %% save TRF data 
 
-filename_data = sprintf('%sstep6_v5_shortTRF%s%s_d%dgap%d.mat', outfolder, nameopt, experiment_name, windowsize, windowgap);
+filename_data = sprintf('%sstep6_v5_shortTRF%sref%s_%s_d%dgap%d.mat', outfolder, nameopt, refCh, experiment_name, windowsize, windowgap);
 save(filename_data, 'x', 'TRFs', 'CreFac', 'ch_ind_ref', 'Num_Ch_ref', 'ch_list_ref')
 disp(strcat(experiment_name, ' has been proccessed'))
 

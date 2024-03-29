@@ -17,7 +17,7 @@
 %%% v3
 %%% 20231207 two instructions 'experiment_mTRF_feasibility_v4.m' (non-duratio/slice)
 %%% v4
-%%% 20240220 peak comparison
+%%% 20240220 peak comparison (need to process step5-v5)
 %%% 20240227 ICA option
 %%% 20240327 re-referenceing of A1 and A2
 
@@ -30,10 +30,15 @@ addpath('../../02_EEGanalysis'); %add path of EEGanalysis
 OSflag = OSdetection_v1;
 
 %%% reference %%%
-refOpt = ["O1O2" "A1A2"]; %options of onsets
+refOpt = ["O1O2" "A1A2"]; %options of reference channels
 prompt = 'Chose re-referencing cannel:';  % prompt message
 [refInd,tf] = listdlg('PromptString',prompt,'SelectionMode','single','ListSize',[200 200],'ListString',refOpt); % option selection window
 refCh = refOpt(refInd);
+
+proOpt = ["FzCz" "Allch"]; %options of procesing data
+prompt = 'Process:';  % prompt message
+[proInd,tf] = listdlg('PromptString',prompt,'SelectionMode','single','ListSize',[200 200],'ListString',proOpt); % option selection window
+proCh = proOpt(proInd);
 
 %%% option %%%
 ICAopt = 1; %use ICA data (1) or not (0)
@@ -42,9 +47,11 @@ ICAopt = 1; %use ICA data (1) or not (0)
 if ICAopt
     if refInd == 1 %O1 and O2
         namekey = 'step4_plotdatav3_refO1O2*'; %O1 and O2
+        Coldch = [14 15]; % O1 and O2
     elseif refInd == 2
         namekey = 'step4_plotdatav3_refA1A2*'; %A1 and A2
-    end  
+        Coldch = [9 18]; %A1 and A2
+    end   
     nameopt = "_ICA_";
 else      
     namekey = 'step4_plotdata_*';   
@@ -94,8 +101,20 @@ end
 
 %% data preparation
 
+%%% chanel info
+if proInd == 1 %use subtracted (ICAed) epoch
+    chs = ["Fz", "Cz"];
+elseif proInd == 2 %use all channelss epoch
+    locstable  = struct2table(readlocs('../LocationFiles/DSI-24 Channel Locations w.ced')); %channel configuration file for numCh channels (DSI-24)
+    chs_temp  = string(locstable.labels);
+    Num_Ch_temp = length(chs_temp); %number of channels
+    ch_ind_ref = 1:Num_Ch_temp;
+    ch_ind_ref(Coldch) = []; % index of channels afetr re-referensing
+
+    chs = chs_temp(ch_ind_ref);
+end
+
 stim_tag = ["Left", "Right", "Mixed"]; 
-chs = ["Fz", "Cz"];
 instruction = ["Left", "Right"];
 
 %% load models
@@ -107,12 +126,16 @@ for k = 1:numCh
     for j =1: numStimtag-1 %except mix
         for l = 1:length(inst_flg)
 
+            %load the model generated in step5-v5
             filename = sprintf('mTRF_%s_inst%s', stim_tag(j), instruction(l));
             if refInd == 1 
                 filename_mdl = strcat(outfolder_mTRFmdl, 'model', nameopt, filename, '.mat');
-            elseif refInd == 2
+            elseif refInd == 2 && proInd == 1
                 filename_mdl = strcat(outfolder_mTRFmdl, 'model', nameopt, refCh, filename, '.mat');
+            elseif refInd == 2 && proInd == 2
+                filename_mdl = strcat(outfolder_mTRFmdl, 'model', nameopt, refCh, "_", proCh, filename, '.mat');
             end
+            
             load(filename_mdl);
             disp(strcat(filename, ' has been loaded'))
             [x, y] = mTRFplot_pros(model,'trf','all',k,[-50,350]);
@@ -158,42 +181,45 @@ ylabel('Subtraction of peak Maximum of TRFs');
 grid on;
 wholetitle = strcat("Subtraction of TRF peaks: ", experiment_name);
 sgtitle(wholetitle,'interpreter', "latex")
-filename_pdf = strcat(outfolder_mTRFfig_step6, sprintf('TRFpeaksubq_%s_%s', experiment_name, refCh), '.pdf');
+filename_pdf = strcat(outfolder_mTRFfig_step6, sprintf('TRFpeaksubq_%s_%s_%s', experiment_name, refCh, proCh), '.pdf');
 saveas(gcf, filename_pdf)
 
 %% TRF figures
 
-figure;
-
-co = 0;
-for k = 1:numCh
-    for j =1: numStimtag-1 %except mix
-        co = co+1;
-        subplot(2,2,co)
-        plot(x,TRF_match(:,k,j)); hold on;
-        plot(x,TRF_unmatch(:,k,j)); hold on;
-        xline(x(maxind(k,j)),'--'); hold on; 
-        yline(0); hold on;
-        xline(0); hold on;
-
-        title(strcat(chs(k), " " ,instruction(j), " stimulus"))
-        xlim(xrange)
-        xlabel('Time lag (ms)');
-        ylim(yrange);
-        ylabel('Amplitude (a.u.)')
-        grid on;
+if proInd == 1
+    figure;
+    
+    co = 0;
+    for k = 1:numCh
+        for j =1: numStimtag-1 %except mix
+            co = co+1;
+            subplot(2,2,co)
+            plot(x,TRF_match(:,k,j)); hold on;
+            plot(x,TRF_unmatch(:,k,j)); hold on;
+            xline(x(maxind(k,j)),'--'); hold on; 
+            yline(0); hold on;
+            xline(0); hold on;
+    
+            title(strcat(chs(k), " " ,instruction(j), " stimulus"))
+            xlim(xrange)
+            xlabel('Time lag (ms)');
+            ylim(yrange);
+            ylabel('Amplitude (a.u.)')
+            grid on;
+        end
     end
+    
+    legend("matched","unmatched", "max for matched", 'Location','best')
+    sgtitle(sprintf('TRF peaks %s', experiment_name),'interpreter', "latex")
+    filename_pdf = strcat(outfolder_mTRFfig_step6, sprintf('TRF%s%s_%s_%s',nameopt, experiment_name, refCh), '.pdf');
+    saveas(gcf, filename_pdf)
 end
-
-legend("matched","unmatched", "max for matched", 'Location','best')
-sgtitle(sprintf('TRF peaks %s', experiment_name),'interpreter', "latex")
-filename_pdf = strcat(outfolder_mTRFfig_step6, sprintf('TRF%s%s_%s',nameopt, experiment_name, refCh), '.pdf');
-saveas(gcf, filename_pdf)
 
 %% save SNR data 
 
-filename_data = strcat(outfolder, sprintf('step6_matchTRF%s%s_%s', nameopt, refCh, experiment_name), '.mat');
+filename_data = strcat(outfolder, sprintf('step6_matchTRF%s%s_%s_%s', nameopt, refCh, proCh, experiment_name), '.mat');
 save(filename_data, 'x', 'TRF_match', 'TRF_unmatch')
+disp(strcat(filename_data, ' has been loaded'))
 
 %% mTRF processing for plot function
 function [x, y] = mTRFplot_pros(model,type,feat,chan,xlims,avgfeat,avgchan)

@@ -17,7 +17,7 @@
 %%% v4 
 %%% 20240221 subtraction plot from step6 v4
 %%% 20240313 Jacknife
-%%% 20240327 A1A2 re-referencing option
+%%% 20240327 A1A2 re-referencing option, topology analysis
 
 clearvars; 
 close all;
@@ -31,8 +31,6 @@ figurepath = "figure/";
 
 stim_tag = ["Left", "Right", "Mixed"];
 numTag      = length(stim_tag);
-chs         = ["Fz", "Cz"];
-numCh       = length(chs);
 instruction = ["Left", "Right"];
 numInst     = length(instruction);
 
@@ -53,6 +51,11 @@ prompt = 'Chose re-referencing cannel:';  % prompt message
 [refInd,tf] = listdlg('PromptString',prompt,'SelectionMode','single','ListSize',[200 200],'ListString',refOpt); % option selection window
 refCh = refOpt(refInd);
 
+proOpt = ["FzCz" "Allch"]; %options of procesing data
+prompt = 'Process:';  % prompt message
+[proInd,tf] = listdlg('PromptString',prompt,'SelectionMode','single','ListSize',[200 200],'ListString',proOpt); % option selection window
+proCh = proOpt(proInd);
+
 %%% option %%%
 ICAopt = 1; %use ICA data (1) or not (0)
 %%%%%%%%%%%%%%
@@ -60,14 +63,36 @@ ICAopt = 1; %use ICA data (1) or not (0)
 if ICAopt
     if refInd == 1 %O1 and O2
         namekey = 'step6_matchTRF_ICA_O1O2*'; %O1 and O2
+        Coldch = [14 15]; % O1 and O2
     elseif refInd == 2
-        namekey = 'step6_matchTRF_ICA_A1A2*'; %A1 and A2
+        if proInd == 1
+            namekey = 'step6_matchTRF_ICA_A1A2_s*'; %A1 and A2
+        elseif proInd == 2
+            namekey = strcat('step6_matchTRF_ICA_A1A2_', proCh, "*"); %A1 and A2
+        end
+        Coldch = [9 18]; %A1 and A2
     end  
     nameopt = "_ICA_";
 else      
     namekey = 'step6_matchTRF_s*';   
     nameopt = "_";
 end
+
+%% chanel info
+
+if proInd == 1 %use subtracted (ICAed) epoch
+    chs = ["Fz", "Cz"];
+elseif proInd == 2 %use all channelss epoch
+    locstable  = struct2table(readlocs('../LocationFiles/DSI-24 Channel Locations w.ced')); %channel configuration file for numCh channels (DSI-24)
+    chs_temp  = string(locstable.labels);
+    Num_Ch_temp = length(chs_temp); %number of channels
+    ch_ind_ref = 1:Num_Ch_temp;
+    ch_ind_ref(Coldch) = []; % index of channels afetr re-referensing
+
+    chs = chs_temp(ch_ind_ref);
+end
+
+numCh = length(chs);
 
 %% load list
 
@@ -141,7 +166,7 @@ ylabel('Subtraction between peak Maximum of TRF');
 grid on;
 wholetitle = strcat("Subtraction of TRF peaks: ", subjectlist);
 sgtitle(wholetitle,'interpreter', "latex")
-filename_pdf = strcat(outfolder_mTRFfig_step7, sprintf('TRFpeaksub_%s', subjectlist), '.pdf');
+filename_pdf = strcat(outfolder_mTRFfig_step7, sprintf('TRFpeaksub_%s_%s_%s', refCh, proCh, subjectlist), '.pdf');
 saveas(gcf, filename_pdf)
 
 %% TRF figures
@@ -182,8 +207,8 @@ legend("matched ave","unmatched ave", "max for matched", "max for unmatched", 'L
 lgd = legend;
 lgd.Layout.Tile = 'east';
 sgtitle(sprintf('TRF average (%d sub) and peaks %s', Snum, subjectlist),'interpreter', "latex")
-filename_pdf = strcat(outfolder_mTRFfig_step7, sprintf('TRFave_%s', subjectlist), '.pdf');
-saveas(gcf, filename_pdf)
+filename_pdf = strcat(outfolder_mTRFfig_step7, sprintf('TRFave_%s_%s_%s', refCh, proCh, subjectlist), '.pdf');
+exportgraphics(gcf,filename_pdf','Resolution',400)
 
 %% Jackknife figures
 
@@ -224,6 +249,32 @@ legend("matched", "unmatched", "matched std err", "unmatched std err", "peaks of
 lgd = legend;
 lgd.Layout.Tile = 'east';
 sgtitle(sprintf('TRF Jackknifed average (%d sub) and peaks %s', Snum, subjectlist),'interpreter', "latex")
-filename_pdf = strcat(outfolder_mTRFfig_step7, sprintf('TRFJKave_%s', subjectlist), '.pdf');
-saveas(gcf, filename_pdf)
+filename_pdf = strcat(outfolder_mTRFfig_step7, sprintf('TRFJKave_%s_%s_%s', refCh, proCh, subjectlist), '.pdf');
+exportgraphics(gcf,filename_pdf','Resolution',400)
 
+
+%% Topology figures
+
+if proInd == 2
+%%% load location file
+eeglab
+
+locstemp        = readlocs('../LocationFiles/DSI-24 Channel Locations w.ced'); %channel configuration file for numCh channels (DSI-24)
+locstable       = struct2table(locstemp); %swap X and Y
+temp            = locstable.X;
+locstable.X     = locstable.Y;
+locstable.Y     = temp;
+locstable.theta = locstable.theta + 90;
+locs            = table2struct(locstable);
+locs(Coldch)    = []; % index of channels afetr re-referensing
+
+for j =1: numTag-1 %except mix
+
+    TRF_Topology_v1(PeakJK_mt(:,:,j)', PeakJK_um(:,:,j)', locs)
+
+    sgtitle(sprintf('TRF Topology (JN, %d sub) and peaks %s, stim:%s', Snum, subjectlist, stim_tag(j)),'interpreter', "latex")
+    filename_pdf = strcat(outfolder_mTRFfig_step7, sprintf('TRFTopoJK_%s_%s_%s', refCh, subjectlist, stim_tag(j)), '.pdf');
+    exportgraphics(gcf,filename_pdf','Resolution',300)
+end
+
+end

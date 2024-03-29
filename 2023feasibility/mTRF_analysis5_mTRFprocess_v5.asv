@@ -1,4 +1,4 @@
-%%% mTRF analysis - step 5 mTRF model generation for various stimuli length - nonsub -> use raw data of all the channels %%% 
+%%% mTRF analysis - step 5 mTRF model generation for various stimuli length - nonsub -> use raw data of all the channels  v5 %%% 
 %%% - evoked responce (individuals), use all channels, two instructions version
 %%%
 %%% required Add-ons
@@ -22,6 +22,7 @@
 %%% 20231207 two instructions 'experiment_mTRF_feasibility_v4.m'
 %%% v5
 %%% 20240222 ICA option
+%%% 20240328 all channels option 
 
 clearvars; 
 close all;
@@ -33,16 +34,23 @@ OSflag = OSdetection_v1;
 
 %%% reference %%%
 refOpt = ["O1O2" "A1A2"]; %options of onsets
-prompt = 'Chose re-referencing cannel:';  % prompt message
+prompt = 'Chose re-referencing channel:';  % prompt message
 [refInd,tf] = listdlg('PromptString',prompt,'SelectionMode','single','ListSize',[200 200],'ListString',refOpt); % option selection window
 refCh = refOpt(refInd);
+
+proOpt = ["FzCz" "Allch"]; %options of onsets
+prompt = 'Process:';  % prompt message
+[proInd,tf] = listdlg('PromptString',prompt,'SelectionMode','single','ListSize',[200 200],'ListString',proOpt); % option selection window
+proCh = proOpt(proInd);
 
 ICAopt = 1; %use ICA data (1) or not (0)
 if ICAopt
     if refInd == 1 %O1 and O2
         namekey = 'step4_plotdatav3_refO1O2*'; %O1 and O2
+        Coldch = [14 15]; % O1 and O2
     elseif refInd == 2
         namekey = 'step4_plotdatav3_refA1A2*'; %A1 and A2
+        Coldch = [9 18]; %A1 and A2
     end  
     nameopt = "_ICA_";
 else      
@@ -92,10 +100,6 @@ elseif OSflag(1) == "2" %Windows
     load([outfolder metadata_file]); %participant's responces
 end
 
-if ICAopt; epochs = saveEp; end %use subtracted (ICAed) epoch
-% epochs(:,[Hotch(1) Hotch(2)],:) = epochs(:,[Hotch(1) Hotch(2)],:)-epochs(:,[Coldch(1) Coldch(2)],:)/2-epochs(:,[Coldch(2) Coldch(1)],:)/2; %subtraction from center channel
-
-
 %% parameters
 
 stim_tag = ["Left", "Right", "Mixed"]; 
@@ -136,6 +140,19 @@ end
 %% data preparation
 
 %%% chanel info
+if ICAopt==1 && proInd==1
+    epochs = saveEp; %use subtracted (ICAed) epoch
+elseif proInd == 2
+    epochs = epochs; %use all channelss epoch
+    Num_Ch = size(epochs,2); %number of channels
+    ch_ind_ref = 1:Num_Ch;
+    ch_ind_ref(Coldch) = []; % index of channels afetr re-referensing
+    Num_Ch_ref = length(ch_ind_ref);
+    
+    ch_list_ref = ch_list_orgn(ch_ind_ref);
+    epochs_ref = epochs(:,ch_ind_ref,:)-(epochs(:,Coldch(1),:)+epochs(:,Coldch(2),:))/2; %subtraction from center channel
+end
+    
 chs = ["Fz", "Cz"];
 numch = [4, 8];
 instruction = ["Left", "Right"];
@@ -152,22 +169,21 @@ for i = 1:length(inst_flg)
         %%% model training
         model = TRFestimation_v1(stim_ext(:,:,j), fs_New, resp, fs_New, 0, 0);
         filename = sprintf('mTRF_%s_inst%s', stim_tag(j), instruction(i));
-        filename_mdl = strcat(outfolder_mTRFmdl, 'model', nameopt,  filename, '.mat');
+        filename_mdl = strcat(outfolder_mTRFmdl, 'model', nameopt, refCh, "_", proCh, filename, '.mat');
         save(filename_mdl,'model');
+        disp(strcat(filename, ' model has been saved'))
 
         %%% mTRF estimation (figure)
-        for k = 1:length(chs)     
-            
-            TRFestimation_v1(stim_ext(:,:,j), fs_New, resp, fs_New, k, model);
-
-            sgtitle(sprintf('mTRF stimulus: %s,inst: %s, %s ', stim_tag(j), instruction(i), chs(k)))
-            filename_pdf = strcat(outfolder_mTRFfig, filename, nameopt, refCh, ...
-                ...
-               chs(k), '.pdf');
-            saveas(gcf, filename_pdf)
-            disp(strcat(filename, ' figure has been saved'))
-
-        end    
+        if proInd == 1
+            for k = 1:length(chs)     
+                TRFestimation_v1(stim_ext(:,:,j), fs_New, resp, fs_New, k, model);
+    
+                sgtitle(sprintf('mTRF stimulus: %s,inst: %s, %s ', stim_tag(j), instruction(i), chs(k)))
+                filename_pdf = strcat(outfolder_mTRFfig, filename, nameopt, refCh, chs(k), '.pdf');
+                saveas(gcf, filename_pdf)
+                disp(strcat(filename, ' figure has been saved'))
+            end    
+        end
     end
 end
 

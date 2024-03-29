@@ -9,68 +9,40 @@
 %%% - 
 
 %%% v1  
-%%% 20240320 TRF Topology analysis function
+%%% 20240320 TRF Topology analysis function (only for the fixed time length, desigened for step7-v4)
 
-function [] = TRF_Topology_v1(TRFdata)
+function [] = TRF_Topology_v1(TRFpk1, TRFpk2, locs)
 
-%index: TRFdata([TRF samples], [windows], [instruction], [stimuli], [channel], [subj])
+%index: TRFpk([channel], [subj]) --- TRF peak files
 
-addpath('../../02_EEGanalysis'); %add path of EEGanalysis for Location file
+%% parameters 
 
 caxis = [-1.2 1.2];
 taxis = [-3 3];
 paxis = [0 2];
 
-n_ch = 20; %numbers of Channels
-n_subj = 5; 
-n_time_of_interest = 10; % peak in TRF
-n_time_segment = 5; % segment of sliding time window
-
-%% part 1 - time course
-DataTimeCourse =  rand([n_time_segment,n_ch,n_subj]); % put your data [time windows,channel,subj]
-
-locstemp    = readlocs('LocationFiles/DSI-24 Channel Locations w.ced'); %channel configuration file for numCh channels (DSI-24)
-locstable = struct2table(locstemp); %swap X and Y
-temp = locstable.X;
-locstable.X = locstable.Y;
-locstable.Y = temp;
-locstable.theta = locstable.theta + 90;
-locs=table2struct(locstable);
-
-for k = 1:n_time_segment
-    topoTime = squeeze(DataTimeCourse(k,:,:));
-
-    figure
-    set(gcf,'position',[700 605 1000 195])
-    topoplot(nanmean(topoTime,2),locs,'maplimits',caxis,'whitebk','on')
-    title(sprintf('Time frame = %d', k))
-    colorbar
-    keyboard;
-end 
+n_ch   = size(TRFpk1,1); %numbers of Channels
+n_subj = size(TRFpk1,2); %numbers of Subjects
 
 %% part 2 - attentional modulation
-DataLeft = rand([n_time_of_interest,n_ch,n_subj]);  % put your data [time of interest,channel,subj]
-DataRight = rand([n_time_of_interest,n_ch,n_subj]); % put your data [time of interest,channel,subj]
 
-topoLeft = squeeze(mean(DataLeft));  % mean in the time of interest 
-topoRight = squeeze(mean(DataRight)); % mean in the time of interest
+% index: TRFpk1[channel,subj]
 
 for k=1:n_ch
-    [h1(k),p1(k),ci,stat] = ttest(topoLeft(k,:), topoRight(k,:));
+    [h1(k),p1(k),ci,stat] = ttest(TRFpk1(k,:), TRFpk2(k,:));
     tstat(k) = stat.tstat;
 end
 
-locs  = readlocs('LocationFiles/DSI-24_ChannelLocations.ced'); %channel configuration file for numCh channels (DSI-24)
-
 figure
+
 set(gcf,'position',[700 605 1000 195])
 subplot(1,4,1)
-topoplot(nanmean(topoLeft,2),locs,'maplimits',caxis,'whitebk','on')
-title(sprintf('Attended Left'))
+topoplot(nanmean(TRFpk1,2),locs,'maplimits',caxis,'whitebk','on')
+title(sprintf('Matched'))
 colorbar
 subplot(1,4,2)
-topoplot(nanmean(topoRight,2),locs,'maplimits',caxis,'whitebk','on')
-title(sprintf('Attended Right'))
+topoplot(nanmean(TRFpk2,2),locs,'maplimits',caxis,'whitebk','on')
+title(sprintf('Unmatched'))
 colorbar
 subplot(1,4,3)
 topoplot(tstat,locs,'maplimits',taxis,'whitebk','on')

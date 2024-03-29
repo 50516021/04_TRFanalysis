@@ -18,8 +18,7 @@
 %%% 20240221 subtraction plot from step6 v4
 %%% 20240313 Jacknife
 %%% v5
-%%% 20240320 sliced short term processing (similer to step5-v6), all cannel
-%%% options for topology analysis
+%%% 20240320 topology analysis???
 
 clearvars; 
 close all;
