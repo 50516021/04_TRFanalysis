@@ -46,6 +46,58 @@ peakrangeJK = peakrange; %peak range for Jackknife
 outfolder_mTRFfig_step7 = strcat(figurepath, 'step7/');
 mkdir(outfolder_mTRFfig_step7)
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+windowsize = 300;  %sliced window size [sec]
+windowgap  = 10; %sliced window gap [sec]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% options
+
+%%% reference %%%
+refOpt = ["O1O2" "A1A2"]; %options of onsets
+prompt = 'Chose re-referencing cannel:';  % prompt message
+[refInd,tf] = listdlg('PromptString',prompt,'SelectionMode','single','ListSize',[200 200],'ListString',refOpt); % option selection window
+refCh = refOpt(refInd);
+
+proOpt = ["FzCz" "Allch"]; %options of procesing data
+prompt = 'Process:';  % prompt message
+[proInd,tf] = listdlg('PromptString',prompt,'SelectionMode','single','ListSize',[200 200],'ListString',proOpt); % option selection window
+proCh = proOpt(proInd);
+
+%%% option %%%
+ICAopt = 1; %use ICA data (1) or not (0)
+%%%%%%%%%%%%%%
+
+if ICAopt
+    if refInd == 1 %O1 and O2
+        namekey = 'step6_v5_shortTRF_ICA_refO1O2_'; %O1 and O2
+        Coldch = [14 15]; % O1 and O2
+    elseif refInd == 2
+        namekey = 'step6_v5_shortTRF_ICA_refA1A2_'; %A1 and A2
+        Coldch = [9 18]; %A1 and A2
+    end  
+    nameopt = "_ICA_";
+else      
+    namekey = 'step6_matchTRF_s*';   
+    nameopt = "_";
+end
+
+%% chanel info
+
+if proInd == 1 %use subtracted (ICAed) epoch
+    chs = ["Fz", "Cz"];
+elseif proInd == 2 %use all channelss epoch
+    locstable  = struct2table(readlocs('../LocationFiles/DSI-24 Channel Locations w.ced')); %channel configuration file for numCh channels (DSI-24)
+    chs_temp  = string(locstable.labels);
+    Num_Ch_temp = length(chs_temp); %number of channels
+    ch_ind_ref = 1:Num_Ch_temp;
+    ch_ind_ref(Coldch) = []; % index of channels afetr re-referensing
+
+    chs = chs_temp(ch_ind_ref);
+end
+
+numCh = length(chs);
+
 %% load list
 
 subjectlist = "subjlist_mTRF_ver20240327";
@@ -60,14 +112,16 @@ Snum = size(subList,1);
 filenames = {};
 for i = 1:Snum
     %%%get folder name
-    Snum_str = string(subList.ID(i));
-    folder = struct2table(dir(strcat('subject/s000', Snum_str, '*')));
+    if     subList.ID(i) <  100; subdigit = 's000';    % determine subject's digit
+    elseif subList.ID(i) >= 100; subdigit = 's00'; end
+
+    folder = struct2table(dir(strcat('subject/', subdigit, string(subList.ID(i)), '*')));
     experiment_name = folder.name; %subject (experiment) name
     foldTemp =  string(sprintf('subject/%s/', experiment_name)); %name of the output folder containing the subject's data 
     filenames{i} = foldTemp;
 
     % load SNR data
-    TRFfile = ls(strcat(foldTemp, ['step6_v5_shortTRF_ICA_s000', char(Snum_str), '*'])); %find responce file
+    TRFfile = ls(sprintf('%s%s%s_d%dgap%d.mat',foldTemp, namekey, experiment_name, windowsize, windowgap)); %find responce file
     if OSflag(1) == "1"   %MacOS
         TRFfile = TRFfile(1:end-1); %extract unnecessary charactar
     elseif OSflag(1) == "2" %Windows
@@ -115,9 +169,10 @@ for k = 1:Num_Ch_ref
             % subplot(2,2,co)
             nexttile;
             %%% Jackknife calculation and plot
-            [tscore(k,j), TRF_JK_mt(:,:,l,k,j), TRF_JK_um(:,:,l,k,j), PeakJK_mt(:,l,k,j), PeakindJK_mt(:,l,k,j), PeakJK_um(:,l,k,j), PeakindJK_um(:,l,k,j)] ...
+            [tscore(k,j), TRF_JK_mt(:,l,k,j,:), TRF_JK_um(:,l,k,j,:), PeakJK_mt(:,l,k,j), PeakindJK_mt(:,l,k,j), PeakJK_um(:,l,k,j), PeakindJK_um(:,l,k,j)] ...
                 = jackknife_comp_v1(TRFs_match(:,l,j,k,:), TRFs_unmatch(:,l,j,k,:), fs, x, peakrangeJK(1), peakrangeJK(2)); 
-            %index: TRF_JK_mt(TRF samples, subject, stimuli, channel)
+            %index: TRF_JK_mt([TRF samples], [windows], [stimuli], [channel], [subj])
+            %index: PeakJK_mt([windows], [stimuli], [channel], [subj])
     
             % scatter(x(PeakindJK_mt(:,k,j)), PeakJK_mt(:,k,j), "filled"); hold on;
             % scatter(x(PeakindJK_um(:,k,j)), PeakJK_um(:,k,j), "filled"); hold on;
@@ -143,36 +198,29 @@ end
 % saveas(gcf, filename_pdf)
 
 
-%% part 2 - attentional modulation
-% DataLeft = rand([n_time_of_interest,n_ch,n_subj]);  % put your data [time of interest,channel,subj]
-% DataRight = rand([n_time_of_interest,n_ch,n_subj]); % put your data [time of interest,channel,subj]
+%% Topology figures
 
-DataLeft = PeakJK_mt(:,l,k,j);
-DataRight = PeakJK_um(:,l,k,j);
+if proInd == 2
+%%% load location file
+eeglab
 
-topoLeft = squeeze(mean(DataLeft));  % mean in the time of interest 
-topoRight = squeeze(mean(DataRight)); % mean in the time of interest
+locstemp        = readlocs('../LocationFiles/DSI-24 Channel Locations w.ced'); %channel configuration file for numCh channels (DSI-24)
+locstable       = struct2table(locstemp); %swap X and Y
+temp            = locstable.X;
+locstable.X     = locstable.Y;
+locstable.Y     = temp;
+locstable.theta = locstable.theta + 90;
+locs            = table2struct(locstable);
+locs(Coldch)    = []; % index of channels afetr re-referensing
 
-for k=1:n_ch
-    [h1(k),p1(k),ci,stat] = ttest(topoLeft(k,:), topoRight(k,:));
-    tstat(k) = stat.tstat;
+for j =1: numTag-1 %except mix
+    for l = 1:num_window
+        TRF_Topology_v1(PeakJK_mt(l,:,:,j)', PeakJK_um(l,:,:,j)', locs)
+    
+        sgtitle(sprintf('TRF Topology (JN, %d sub) and peaks %s, stim:%s, window:%d', Snum, subjectlist, stim_tag(j)),'interpreter', "latex")
+        filename_pdf = strcat(outfolder_mTRFfig_step7, sprintf('TRFTopoJK_%s_%s_%s', refCh, subjectlist, stim_tag(j)), '.pdf');
+        exportgraphics(gcf,filename_pdf','Resolution',300)
+    end
 end
 
-figure
-set(gcf,'position',[700 605 1000 195])
-subplot(1,4,1)
-topoplot(nanmean(topoLeft,2),locs,'maplimits',caxis,'whitebk','on')
-title(sprintf('Attended Left'))
-colorbar
-subplot(1,4,2)
-topoplot(nanmean(topoRight,2),locs,'maplimits',caxis,'whitebk','on')
-title(sprintf('Attended Right'))
-colorbar
-subplot(1,4,3)
-topoplot(tstat,locs,'maplimits',taxis,'whitebk','on')
-colorbar
-title('T score')
-subplot(1,4,4)
-topoplot(-log10(p1),locs,'maplimits',paxis,'whitebk','on')
-colorbar
-title('-log10(p)')
+end

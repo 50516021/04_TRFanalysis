@@ -21,7 +21,7 @@
 function [tscore, signalA, signalB, PeakValueA, PeakIndexA, PeakValueB, PeakIndexB] = jackknife_comp_v1(signalA, signalB, fs, t, t_stt, t_end)
 
 arguments
-    signalA double 
+    signalA double %index: signal([sample],[subject])
     signalB double
     fs      double
     t = [1:size(signalA,1)]/fs;

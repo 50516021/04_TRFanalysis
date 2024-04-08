@@ -33,15 +33,20 @@ for k=1:n_ch
     tstat(k) = stat.tstat;
 end
 
-figure
+if n_subj>1
+TRFpk1 = nanmean(TRFpk1,2);
+TRFpk2 = nanmean(TRFpk2,2);
+end
+
+figure;
 
 set(gcf,'position',[700 605 1000 195])
 subplot(1,4,1)
-topoplot(nanmean(TRFpk1,2),locs,'maplimits',caxis,'whitebk','on')
+topoplot(TRFpk1,locs,'maplimits',caxis,'whitebk','on') 
 title(sprintf('Matched'))
 colorbar
 subplot(1,4,2)
-topoplot(nanmean(TRFpk2,2),locs,'maplimits',caxis,'whitebk','on')
+topoplot(TRFpk2,locs,'maplimits',caxis,'whitebk','on')
 title(sprintf('Unmatched'))
 colorbar
 subplot(1,4,3)
@@ -54,3 +59,4 @@ colorbar
 title('-log10(p)')
 
 end
+

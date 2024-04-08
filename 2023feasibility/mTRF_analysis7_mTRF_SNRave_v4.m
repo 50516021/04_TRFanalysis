@@ -252,7 +252,6 @@ sgtitle(sprintf('TRF Jackknifed average (%d sub) and peaks %s', Snum, subjectlis
 filename_pdf = strcat(outfolder_mTRFfig_step7, sprintf('TRFJKave_%s_%s_%s', refCh, proCh, subjectlist), '.pdf');
 exportgraphics(gcf,filename_pdf','Resolution',400)
 
-
 %% Topology figures
 
 if proInd == 2

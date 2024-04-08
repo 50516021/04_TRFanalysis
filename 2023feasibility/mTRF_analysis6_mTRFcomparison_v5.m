@@ -23,6 +23,7 @@
 %%% 20240320 sliced short term processing (similer to step5-v6), all channel
 %%% options for topology analysis -> need step4-v3 data
 %%% 20240327 re-referenceing of A1 and A2 (process all channels)
+%%% 20240402 topology analysis
 
 clearvars; 
 close all;
@@ -66,6 +67,13 @@ ch_list_temp = struct2table(locstemp);
 ch_list_orgn = cellstr(ch_list_temp.labels);
 
 %% parameters
+
+stim_tag = ["Left", "Right"]; 
+% stim_dur = [5*60 10*60 stimulidur]; %stimuli extraction duration [sec] 
+
+windowsize = 180;  %sliced window size [sec]
+windowgap  = 10; %sliced window gap [sec]
+
 %%%get folder name
 folders = struct2table(dir('subject/s*'));
 prompt = 'Choose folder name:';  % prompt message
@@ -106,15 +114,6 @@ elseif OSflag(1) == "2" %Windows
 end
 
 % if ICAopt; epochs = saveEp; end %use subtracted (ICAed) epoch
-
-
-%% parameters
-
-stim_tag = ["Left", "Right"]; 
-% stim_dur = [5*60 10*60 stimulidur]; %stimuli extraction duration [sec] 
-
-windowsize = 240;  %sliced window size [sec]
-windowgap  = 10; %sliced window gap [sec]
 
 %% stimulus preparation
 
@@ -238,10 +237,128 @@ for i = 1:length(inst_flg)
     end
 end
 
+%% match and unmatch
+
+TRFs_match(:,:,1,:)   = TRFs(:,:,1,1,:); 
+TRFs_match(:,:,2,:)   = TRFs(:,:,2,2,:); 
+TRFs_unmatch(:,:,1,:) = TRFs(:,:,2,1,:); 
+TRFs_unmatch(:,:,2,:) = TRFs(:,:,1,2,:); 
+%index: TRFs_match([TRF samples], [windows], [stimuli], [channel])
+
+%% load location file
+
+locstable  = struct2table(readlocs('../LocationFiles/DSI-24 Channel Locations w.ced')); %channel configuration file for numCh channels (DSI-24)
+chs_temp  = string(locstable.labels);
+Num_Ch_temp = length(chs_temp); %number of channels
+ch_ind_ref = 1:Num_Ch_temp;
+ch_ind_ref(Coldch) = []; % index of channels afetr re-referensing
+
+chs = chs_temp(ch_ind_ref);
+
+temp            = locstable.X;
+locstable.X     = locstable.Y;
+locstable.Y     = temp;
+locstable.theta = locstable.theta + 90;
+locs            = table2struct(locstable);
+locs(Coldch)    = []; % index of channels afetr re-referensing
+
+%% find peaks
+%%% find a maximum value on Fz and Cz, then, pick peak max values on the
+%%% averaged time domain of Fz and Cz from other channels
+
+numHotCh = length(Hotch);
+
+xrange = [-50, 350];
+yrange = [-7e-4, 10e-4];
+peakrange = [0, 350]; 
+
+
+for l = 1:windowNum
+    for j =1: Stim_num 
+        for k = 1:numHotCh
+            [max_match(l,k,j), maxind_ma(l,k,j)]   = max(TRFs_match(logical((peakrange(1)<x).*(x<peakrange(2))), l, j, Hotch(k))); %only in the case x>0 
+            maxind_ma(l,k,j) = maxind_ma(l,k,j) + sum(x<=peakrange(1));
+            [max_unmatch(l,k,j), maxind_um(l,k,j)] = max(TRFs_unmatch(logical((peakrange(1)<x).*(x<peakrange(2))), l, j, Hotch(k))); %only in the case x>0 
+            maxind_um(l,k,j) = maxind_um(l,k,j) + sum(x<=peakrange(1));
+        end
+        maxind_ma_ave(l,j) = round(mean(maxind_ma(l,:,j)));
+        maxind_um_ave(l,j) = round(mean(maxind_um(l,:,j)));
+    end
+end
+
+%%% process all channels
+for i = 1:Num_Ch_ref
+    for l = 1:windowNum
+        for j =1: Stim_num %except mix
+            max_allch_ma(l,i,j) = TRFs_match(maxind_ma_ave(l,j),l,j,i);
+            max_allch_um(l,i,j) = TRFs_unmatch(maxind_um_ave(l,j),l,j,i);
+        end
+    end
+end
+max_allch_ma(:,Hotch,:) = max_match;
+max_allch_um(:,Hotch,:) = max_unmatch;
+%index: max_allch_ma([windows], [channel], [stimuli])
+
+%%%Plot wave form
+for l = 1:windowNum
+    figure;
+    co = 1;
+    for j =1: Stim_num %except mix
+        % subplot(Stim_num, 2,co)
+        nexttile;
+        plot(x, squeeze(TRFs_match(:,l,j,:))); hold on
+        xline(x(maxind_ma_ave(l,j)))
+        title(sprintf('%s %s',situations(1), stim_tag(j)))
+        xlim(xrange)
+        xlabel('Time lag (ms)');
+        ylim(yrange);
+        ylabel('Amplitude (a.u.)')
+        grid on;
+
+        % subplot(Stim_num, 2,co+1)
+        nexttile;
+        plot(x, squeeze(TRFs_unmatch(:,l,j,:))); hold on
+        xline(x(maxind_um_ave(l,j)))
+        title(sprintf('%s %s',situations(2), stim_tag(j)))
+        xlim(xrange)
+        xlabel('Time lag (ms)');
+        ylim(yrange);
+        ylabel('Amplitude (a.u.)')
+        grid on;
+        
+        co = co+2;
+    end
+    
+    chs_lg = chs;
+    chs_lg(end+1) = "peaklatency";
+    legend(chs_lg)
+    lgd = legend;
+    lgd.Layout.Tile = 'east';
+    wholetitle = sprintf("TRF peaks, window %d - %d s",(l-1)*windowgap, (l-1)*windowgap+windowsize);
+    sgtitle(wholetitle,'interpreter', "latex")
+    filename = sprintf('mTRF_sliced_ref%s_wd%dgap%d',refCh, windowsize, windowgap);
+    filename_pdf = strcat(outfolder_mTRFfig_short, filename, nameopt, '.pdf');
+    saveas(gcf, filename_pdf)
+end
+
+%% Topology figures
+
+for l = 1:windowNum
+    for j =1:Stim_num   %except mix
+    
+        TRF_Topology_v1(squeeze(max_allch_ma(l,:,j)'), squeeze(max_allch_um(l,:,j)'), locs)
+    
+        sgtitle(sprintf('TRF Topology and peaks, stim:%s, window %d - %d s', stim_tag(j), (l-1)*windowgap, (l-1)*windowgap+windowsize),'interpreter', "latex")
+        outfolder_mTRFfig_short_topo = strcat(outfolder_mTRFfig_short, "topo/");
+        filename_pdf = strcat(outfolder_mTRFfig_short_topo, sprintf('TRFTopoJK_%s_%s_wd%dgap%d', refCh, stim_tag(j), windowsize, windowgap), '.pdf');
+        exportgraphics(gcf,filename_pdf','Resolution',300)
+    end     
+end
+
 %% save TRF data 
 
 filename_data = sprintf('%sstep6_v5_shortTRF%sref%s_%s_d%dgap%d.mat', outfolder, nameopt, refCh, experiment_name, windowsize, windowgap);
-save(filename_data, 'x', 'TRFs', 'CreFac', 'ch_ind_ref', 'Num_Ch_ref', 'ch_list_ref')
+save(filename_data, 'x', 'TRFs', 'CreFac', 'ch_ind_ref', 'Num_Ch_ref', 'ch_list_ref', 'windowsize', 'windowgap','windowNum','max_allch_ma','max_allch_um','maxind_ma_ave','maxind_ma_ave','TRFs_match','TRFs_unmatch')
 disp(strcat(experiment_name, ' has been proccessed'))
 
 %% stimulus preparation function %%%
