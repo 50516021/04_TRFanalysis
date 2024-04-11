@@ -71,8 +71,10 @@ ch_list_orgn = cellstr(ch_list_temp.labels);
 stim_tag = ["Left", "Right"]; 
 % stim_dur = [5*60 10*60 stimulidur]; %stimuli extraction duration [sec] 
 
-windowsize = 180;  %sliced window size [sec]
-windowgap  = 10; %sliced window gap [sec]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+windowsize = 120;  %sliced window size [sec]
+windowgap  = 10;   %sliced window gap [sec]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%get folder name
 folders = struct2table(dir('subject/s*'));
@@ -272,7 +274,6 @@ xrange = [-50, 350];
 yrange = [-7e-4, 10e-4];
 peakrange = [0, 350]; 
 
-
 for l = 1:windowNum
     for j =1: Stim_num 
         for k = 1:numHotCh
@@ -347,10 +348,14 @@ for l = 1:windowNum
     for j =1:Stim_num   %except mix
     
         TRF_Topology_v1(squeeze(max_allch_ma(l,:,j)'), squeeze(max_allch_um(l,:,j)'), locs)
+
+        window_stt = (l-1)*windowgap;
+        window_end = (l-1)*windowgap+windowsize;
     
-        sgtitle(sprintf('TRF Topology and peaks, stim:%s, window %d - %d s', stim_tag(j), (l-1)*windowgap, (l-1)*windowgap+windowsize),'interpreter', "latex")
+        sgtitle(sprintf('TRF Topology and peaks, stim:%s, window %d - %d s', stim_tag(j), window_stt, window_end),'interpreter', "latex")
         outfolder_mTRFfig_short_topo = strcat(outfolder_mTRFfig_short, "topo/");
-        filename_pdf = strcat(outfolder_mTRFfig_short_topo, sprintf('TRFTopoJK_%s_%s_wd%dgap%d', refCh, stim_tag(j), windowsize, windowgap), '.pdf');
+        mkdir(outfolder_mTRFfig_short_topo);
+        filename_pdf = strcat(outfolder_mTRFfig_short_topo, sprintf('TRFTopoJK_%s_%s_wd%dgap%d_%dto%ds', refCh, stim_tag(j), windowsize, windowgap, window_stt, window_end), '.pdf');
         exportgraphics(gcf,filename_pdf','Resolution',300)
     end     
 end
