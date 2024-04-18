@@ -24,13 +24,21 @@ arguments
     signalA double %index: signal([sample],[subject])
     signalB double
     fs      double
-    t = [1:size(signalA,1)]/fs;
+    t = 1:(length(signalA(:,1)))/fs;
     t_stt = t(1); 
     t_end = t(end);
 end
 
+
 if size(signalA) ~= size(signalB) 
-    fprintf('the size if the signals should be the same')
+    fprintf('Jacknife WARNING: The size if the signals should be the same')
+    return;
+end
+
+if length(size(signalA)) > 2 
+    fprintf('Jacknife WARNING: The signal should be two-dimentional')
+    signalA = squeeze(signalA);
+    signalB = squeeze(signalB);
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -48,8 +56,6 @@ end
 len_sample = size(signalA,1);
 n_of_subj  = size(signalA,2);
 jk = 1; % Jackknife ~+--
-
-
 
 subjs1 = [1:n_of_subj];
 for k = 1:n_of_subj

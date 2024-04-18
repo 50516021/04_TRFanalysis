@@ -16,6 +16,12 @@
 clearvars;
 close all;
 
+%% parameters
+
+Hotch  = [4 8]; % Fz and Cz (don't change after removing cold channels)
+numHotCh = length(Hotch);   
+stim_tag = ["Left", "Right"]; 
+
 %% file info
 %example: step6_v5_shortTRF_ICA_refA1A2_s00068_20231121_mTRFpilot_v401_d180gap10.mat
 
@@ -27,11 +33,11 @@ experiment_name = folders.name{foldInd,:}; %subject (experiment) name
 outfolder =  sprintf('subject/%s/', experiment_name); %name of the output folder containing the subject's data 
 
 %%%choose file to process 
-files = struct2table(dir([outfolder, 'step6_v5_shortTRF_*']    ));
+files = struct2table(dir([outfolder, 'step6_v5_shortTRF_*']));
 prompt = 'Choose file name:';  % prompt message
 [fileInd,tf] = listdlg('PromptString',prompt,'SelectionMode','single','ListSize',[400 750],'ListString',files.name); % option selection window
 file_path = files.name{fileInd,:}; %subject (experiment) name
-file_name = extractAfter(file_path, outfolder);
+file_name = extractBetween(file_path, outfolder, '.mat');
 
 outfolder_gif = strcat(outfolder, 'mTRF_gif/');
 mkdir(outfolder_gif); 
@@ -46,30 +52,61 @@ load(file_path)
 % 'TRFs_match','TRFs_unmatch'
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%                                                                                               
 
+%% draw figure
+
 xrange = [-50, 350];
 yrange = [-7e-4, 10e-4];
 
-TRFs_match_Fz = squeeze(TRFs(:,:,1,1,4));
+numStim = size(TRFs_match,3);
 
-p = plot(nan,nan);
-p.XData = x;
-dim = [.3 .5 .3 .3];
-ano = annotation('textbox',dim,'String',nan,'FitBoxToText','on');
-
-yline(0); hold on;
-xline(0); hold on;
-
-% title(strcat(chs(k), " " ,instruction(j), " stimulus"))
-xlim(xrange)
-xlabel('Time lag (ms)');
-ylim(yrange);
-ylabel('Amplitude (a.u.)')
-grid on;
-
-for n = 1:size(TRFs_match_Fz,2) 
+for i = 1:numStim
+    for j = 1:numHotCh 
     
-    p.YData = TRFs_match_Fz(:,n);
-    ano.String = sprintf('n=%d',n);
-    exportgraphics(gcf,'testAnimated_1min.gif','Append',true);
-
+        TRF_ma = squeeze(TRFs_match(:,:,i,Hotch(j)));
+        TRF_um = squeeze(TRFs_unmatch(:,:,i,Hotch(j)));
+        
+        figure;
+        
+        subplot(1,2,1)
+        p_ma = plot(nan,nan);
+        p_ma.XData = x;
+        dim = [.17 .5 .3 .3];
+        ano_ma = annotation('textbox',dim,'String',nan,'FitBoxToText','on', 'BackgroundColor','white');
+        yline(0); hold on;
+        xline(0); hold on;
+        title('unmatched')
+        xlim(xrange)
+        xlabel('Time lag (ms)');
+        ylim(yrange);
+        ylabel('Amplitude (a.u.)')
+        grid on;
+        
+        subplot(1,2,2)
+        p_um = plot(nan,nan);
+        p_um.XData = x;
+        yline(0); hold on;
+        xline(0); hold on;
+        title('unmatched')
+        xlim(xrange)
+        xlabel('Time lag (ms)');
+        ylim(yrange);
+        ylabel('Amplitude (a.u.)')
+        grid on;
+        
+        sgtitle(sprintf('%s \n stimuli: %s channel: %s', file_name, stim_tag, ch_list_ref{Hotch(j)})); 
+        filename = strcat(outfolder_gif, "gif_", file_name);
+        
+        for l = 1:windowNum 
+            
+            window_stt = (l-1)*windowgap;
+            window_end = (l-1)*windowgap+windowsize;
+            
+            p_ma.YData = TRF_ma(:,l);
+            p_um.YData = TRF_um(:,l);
+            ano_ma.String = sprintf('window %d - %d s',window_stt, window_end);
+            exportgraphics(gcf,'testAnimated_2min.gif','Append',true);
+        
+        end
+    end
 end
+

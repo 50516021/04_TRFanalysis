@@ -18,7 +18,8 @@
 %%% 20240221 subtraction plot from step6 v4
 %%% 20240313 Jacknife
 %%% v5
-%%% 20240320 topology analysis???
+%%% 20240320 topology analysis
+%%% 20240417 gif generation
 
 clearvars; 
 close all;
@@ -47,7 +48,7 @@ outfolder_mTRFfig_step7 = strcat(figurepath, 'step7/');
 mkdir(outfolder_mTRFfig_step7)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-windowsize = 300;  %sliced window size [sec]
+windowsize = 240;  %sliced window size [sec]
 windowgap  = 10; %sliced window gap [sec]
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -87,6 +88,8 @@ end
 if proInd == 1 %use subtracted (ICAed) epoch
     chs = ["Fz", "Cz"];
 elseif proInd == 2 %use all channelss epoch
+    eeglab
+    
     locstable  = struct2table(readlocs('../LocationFiles/DSI-24 Channel Locations w.ced')); %channel configuration file for numCh channels (DSI-24)
     chs_temp  = string(locstable.labels);
     Num_Ch_temp = length(chs_temp); %number of channels
@@ -94,6 +97,12 @@ elseif proInd == 2 %use all channelss epoch
     ch_ind_ref(Coldch) = []; % index of channels afetr re-referensing
 
     chs = chs_temp(ch_ind_ref);
+
+    temp            = locstable.X;
+    locstable.X     = locstable.Y;
+    locstable.Y     = temp;
+    locstable.theta = locstable.theta + 90;
+
 end
 
 numCh = length(chs);
@@ -129,15 +138,21 @@ for i = 1:Snum
     end
     load(TRFfile)
     TRFdata(:,:,:,:,:,i)   = TRFs;
+    if exist("TRFs_match")
+        TRFs_match_all(:,:,:,:,i)   = TRFs_match;
+        TRFs_unmatch_all(:,:,:,:,i) = TRFs_unmatch;
+    end
     %index: TRFdata([TRF samples], [windows], [instruction], [stimuli], [channel], [subj])
 
 end
 
 num_window = size(TRFs,2);
-TRFs_match(:,:,1,:,:)   = TRFs(:,:,1,1,:,:); 
-TRFs_match(:,:,2,:,:)   = TRFs(:,:,2,2,:,:); 
-TRFs_unmatch(:,:,1,:,:) = TRFs(:,:,2,1,:,:); 
-TRFs_unmatch(:,:,2,:,:) = TRFs(:,:,1,2,:,:); 
+if ~exist("TRFs_match")
+    TRFs_match_all(:,:,1,:,:)   = TRFdata(:,:,1,1,:,:); 
+    TRFs_match_all(:,:,2,:,:)   = TRFdata(:,:,2,2,:,:); 
+    TRFs_unmatch_all(:,:,1,:,:) = TRFdata(:,:,2,1,:,:); 
+    TRFs_unmatch_all(:,:,2,:,:) = TRFdata(:,:,1,2,:,:); 
+end
 %index: TRFs_match([TRF samples], [windows], [stimuli], [channel], [subj])
 
 %% load sensor location file
@@ -158,68 +173,40 @@ fs = length(x)/(x(end)-x(1))*1000; %sampling frequency (Hz)
 % t_stt = peakrangeJK(1)/1000; %peakrange should be sesond, not ms
 % t_end = peakrangeJK(2)/1000;
 
-figure('Position', [100 100 800 600]);
-
-co = 0;
 for k = 1:Num_Ch_ref
     for j =1: numTag-1 %except mix
         for l = 1:num_window
 
-            co = co+1;
-            % subplot(2,2,co)
-            nexttile;
             %%% Jackknife calculation and plot
-            [tscore(k,j), TRF_JK_mt(:,l,k,j,:), TRF_JK_um(:,l,k,j,:), PeakJK_mt(:,l,k,j), PeakindJK_mt(:,l,k,j), PeakJK_um(:,l,k,j), PeakindJK_um(:,l,k,j)] ...
-                = jackknife_comp_v1(TRFs_match(:,l,j,k,:), TRFs_unmatch(:,l,j,k,:), fs, x, peakrangeJK(1), peakrangeJK(2)); 
+            [tscore(k,j), TRF_JK_mt(:,l,k,j,:), TRF_JK_um(:,l,k,j,:), PeakJK_mt(l,j,k,:), PeakindJK_mt(l,j,k,:), PeakJK_um(l,j,k,:), PeakindJK_um(l,j,k,:)] ...
+                = jackknife_comp_v1(squeeze(TRFs_match_all(:,l,j,k,:)), squeeze(TRFs_unmatch_all(:,l,j,k,:)), fs, x, peakrangeJK(1), peakrangeJK(2)); 
             %index: TRF_JK_mt([TRF samples], [windows], [stimuli], [channel], [subj])
             %index: PeakJK_mt([windows], [stimuli], [channel], [subj])
     
-            % scatter(x(PeakindJK_mt(:,k,j)), PeakJK_mt(:,k,j), "filled"); hold on;
-            % scatter(x(PeakindJK_um(:,k,j)), PeakJK_um(:,k,j), "filled"); hold on;
-            % yline(0); hold on;
-            % xline(0); hold on;
-            % 
-            % title(strcat(chs(k), " " ,instruction(j), " stimulus, t = ", string(tscore(k,j))))
-            % xlim(xrange) 
-            % xlabel('Time lag (ms)');
-            % ylim(yrange);
-            % ylabel('Amplitude (a.u.)')
-            % grid on;
-
         end
     end
 end
 
-% legend("matched", "unmatched", "matched std err", "unmatched std err", "peaks of matched", "peaks of unmatched", 'Location','bestoutside')
-% lgd = legend;
-% lgd.Layout.Tile = 'east';
-% sgtitle(sprintf('TRF Jackknifed average (%d sub) and peaks %s', Snum, subjectlist),'interpreter', "latex")
-% filename_pdf = strcat(outfolder_mTRFfig_step7, sprintf('TRFJKave_%s', subjectlist), '.pdf');
-% saveas(gcf, filename_pdf)
-
-
-%% Topology figures
+%% Topology figures and gif
 
 if proInd == 2
-%%% load location file
-eeglab
 
-locstemp        = readlocs('../LocationFiles/DSI-24 Channel Locations w.ced'); %channel configuration file for numCh channels (DSI-24)
-locstable       = struct2table(locstemp); %swap X and Y
-temp            = locstable.X;
-locstable.X     = locstable.Y;
-locstable.Y     = temp;
-locstable.theta = locstable.theta + 90;
-locs            = table2struct(locstable);
-locs(Coldch)    = []; % index of channels afetr re-referensing
+outfolder_gif = strcat(outfolder_mTRFfig_step7, "gif/");
+mkdir(outfolder_gif);
 
 for j =1: numTag-1 %except mix
+    filename_topo = strcat(outfolder_gif, sprintf('TRFTopoJK_%s_%s_%s_wd%dgap%d', refCh, subjectlist, stim_tag(j), windowsize, windowgap)); 
+    filename_topogif = strcat(filename_topo, '.gif');
     for l = 1:num_window
-        TRF_Topology_v1(PeakJK_mt(l,:,:,j)', PeakJK_um(l,:,:,j)', locs)
+        TRF_Topology_v1(squeeze(PeakJK_mt(l,j,:,:)), squeeze(PeakJK_um(l,j,:,:)), locs)
+
+        window_stt = (l-1)*windowgap;
+        window_end = (l-1)*windowgap+windowsize;
     
-        sgtitle(sprintf('TRF Topology (JN, %d sub) and peaks %s, stim:%s, window:%d', Snum, subjectlist, stim_tag(j)),'interpreter', "latex")
-        filename_pdf = strcat(outfolder_mTRFfig_step7, sprintf('TRFTopoJK_%s_%s_%s', refCh, subjectlist, stim_tag(j)), '.pdf');
-        exportgraphics(gcf,filename_pdf','Resolution',300)
+        sgtitle(sprintf('TRF Topology (JN, %d sub) and peaks %s, stim:%s, window %d - %d s\n', Snum, subjectlist, stim_tag(j), window_stt, window_end'),'interpreter', "latex")
+        % filename_pdf = strcat(outfolder_mTRFfig_step7, sprintf('TRFTopoJK_%s_%s_%s', refCh, subjectlist, stim_tag(j)), '.pdf');
+        % exportgraphics(gcf,filename_pdf','Resolution',300)
+        exportgraphics(gcf, filename_topogif, Append=true);
     end
 end
 
