@@ -18,6 +18,7 @@
 %%% 20240221 subtraction plot from step6 v4
 %%% 20240313 Jacknife
 %%% 20240327 A1A2 re-referencing option, topology analysis
+%%% 20240501 handedness analysis
 
 clearvars; 
 close all;
@@ -228,7 +229,8 @@ for k = 1:numCh
         nexttile;
         %%% Jackknife calculation and plot
         [tscore(k,j), TRF_JK_mt(:,:,i,j), TRF_JK_um(:,:,k,j), PeakJK_mt(:,k,j), PeakindJK_mt(:,k,j), PeakJK_um(:,k,j), PeakindJK_um(:,k,j)] = jackknife_comp_v1(TRFs_match(:,:,k,j)', TRFs_unmatch(:,:,k,j)', fs, x, peakrangeJK(1), peakrangeJK(2)); 
-        %index: TRF_JK_mt(TRF samples, subject, stimuli, channel)
+        %index: TRF_JK_mt([TRF samples], [subject], [stimuli], [channel])
+        %index: PeakJK_mt([subject], [stimuli], [channel])
 
         scatter(x(PeakindJK_mt(:,k,j)), PeakJK_mt(:,k,j), "filled"); hold on;
         scatter(x(PeakindJK_um(:,k,j)), PeakJK_um(:,k,j), "filled"); hold on;
@@ -254,6 +256,10 @@ exportgraphics(gcf,filename_pdf','Resolution',400)
 
 %% Topology figures
 
+list_hand = string(subList.handedness);
+hand = ["l", "r"];
+numhand = length(hand);
+
 if proInd == 2
 %%% load location file
 eeglab
@@ -274,6 +280,21 @@ for j =1: numTag-1 %except mix
     sgtitle(sprintf('TRF Topology (JN, %d sub) and peaks %s, stim:%s', Snum, subjectlist, stim_tag(j)),'interpreter', "latex")
     filename_pdf = strcat(outfolder_mTRFfig_step7, sprintf('TRFTopoJK_%s_%s_%s', refCh, subjectlist, stim_tag(j)), '.pdf');
     exportgraphics(gcf,filename_pdf','Resolution',300)
+
+    for i = 1:numhand %left/right hander
+        
+        ind_hand = (list_hand == hand(i));
+        numhander = sum(ind_hand);
+        TRF_Topology_v1(PeakJK_mt(ind_hand,:,j)', PeakJK_um(ind_hand,:,j)', locs)
+    
+        sgtitle(sprintf('TRF Topology (JN, %d sub) and peaks, stim:%s, %s hander', numhander, stim_tag(j), hand(i)),'interpreter', "latex")
+        filename_pdf = strcat(outfolder_mTRFfig_step7, sprintf('TRFTopoJK_%s_%s_%shand_%s', refCh, subjectlist, hand(i), stim_tag(j)), '.pdf');
+        exportgraphics(gcf,filename_pdf','Resolution',300)
+
+    end
+
 end
+
+
 
 end

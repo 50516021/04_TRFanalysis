@@ -20,6 +20,7 @@
 %%% v5
 %%% 20240320 topology analysis
 %%% 20240417 gif generation
+%%% 20240501 Crest Factor
 
 clearvars; 
 close all;
@@ -33,8 +34,9 @@ figurepath = "figure/";
 
 stim_tag = ["Left", "Right", "Mixed"];
 numTag      = length(stim_tag);
-chs         = ["Fz", "Cz"];
-numCh       = length(chs);
+numStim     = numTag-1;
+Hotchs         = ["Fz", "Cz"];
+numHotCh       = length(Hotchs);
 instruction = ["Left", "Right"];
 numInst     = length(instruction);
 
@@ -48,7 +50,7 @@ outfolder_mTRFfig_step7 = strcat(figurepath, 'step7/');
 mkdir(outfolder_mTRFfig_step7)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-windowsize = 240;  %sliced window size [sec]
+windowsize =  180;  %sliced window size [sec]
 windowgap  = 10; %sliced window gap [sec]
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -83,10 +85,12 @@ else
     nameopt = "_";
 end
 
-%% chanel info
+Hotch  = [4 8]; % Fz and Cz (don't change after removing cold channels)
+
+%% channel info
 
 if proInd == 1 %use subtracted (ICAed) epoch
-    chs = ["Fz", "Cz"];
+    Hotchs = ["Fz", "Cz"];
 elseif proInd == 2 %use all channelss epoch
     eeglab
     
@@ -96,16 +100,26 @@ elseif proInd == 2 %use all channelss epoch
     ch_ind_ref = 1:Num_Ch_temp;
     ch_ind_ref(Coldch) = []; % index of channels afetr re-referensing
 
-    chs = chs_temp(ch_ind_ref);
+    Hotchs = chs_temp(ch_ind_ref);
 
     temp            = locstable.X;
     locstable.X     = locstable.Y;
     locstable.Y     = temp;
     locstable.theta = locstable.theta + 90;
+    locs=table2struct(locstable);
+    locs = locs(ch_ind_ref); %channels afetr re-referensing
+
+    locstemp  = readlocs('../LocationFiles/DSI-24 Channel Locations w.ced'); %channel configuration file for numCh channels (DSI-24)
+locstable = struct2table(locstemp); %swap X and Y
+temp = locstable.X;
+locstable.X = locstable.Y;
+locstable.Y = temp;
+locstable.theta = locstable.theta + 90; %lotate
+
 
 end
 
-numCh = length(chs);
+numCh = length(Hotchs);
 
 %% load list
 
@@ -155,17 +169,6 @@ if ~exist("TRFs_match")
 end
 %index: TRFs_match([TRF samples], [windows], [stimuli], [channel], [subj])
 
-%% load sensor location file
-
-locstemp  = readlocs('../LocationFiles/DSI-24 Channel Locations w.ced'); %channel configuration file for numCh channels (DSI-24)
-locstable = struct2table(locstemp); %swap X and Y
-temp = locstable.X;
-locstable.X = locstable.Y;
-locstable.Y = temp;
-locstable.theta = locstable.theta + 90; %lotate
-locs=table2struct(locstable);
-locs = locs(ch_ind_ref); %channels afetr re-referensing
-
 %% Jackknife figures
 
 %%% Jackknife
@@ -180,7 +183,7 @@ for k = 1:Num_Ch_ref
             %%% Jackknife calculation and plot
             [tscore(k,j), TRF_JK_mt(:,l,k,j,:), TRF_JK_um(:,l,k,j,:), PeakJK_mt(l,j,k,:), PeakindJK_mt(l,j,k,:), PeakJK_um(l,j,k,:), PeakindJK_um(l,j,k,:)] ...
                 = jackknife_comp_v1(squeeze(TRFs_match_all(:,l,j,k,:)), squeeze(TRFs_unmatch_all(:,l,j,k,:)), fs, x, peakrangeJK(1), peakrangeJK(2)); 
-            %index: TRF_JK_mt([TRF samples], [windows], [stimuli], [channel], [subj])
+            %index: TRF_JK_mt([TRF samples], [windows], [channel], [stimuli], [subj])
             %index: PeakJK_mt([windows], [stimuli], [channel], [subj])
     
         end
@@ -197,13 +200,16 @@ mkdir(outfolder_gif);
 for j =1: numTag-1 %except mix
     filename_topo = strcat(outfolder_gif, sprintf('TRFTopoJK_%s_%s_%s_wd%dgap%d', refCh, subjectlist, stim_tag(j), windowsize, windowgap)); 
     filename_topogif = strcat(filename_topo, '.gif');
+
+    if exist(filename_topogif); delete(filename_topogif); end %overwrite gif file 
+
     for l = 1:num_window
         TRF_Topology_v1(squeeze(PeakJK_mt(l,j,:,:)), squeeze(PeakJK_um(l,j,:,:)), locs)
 
-        window_stt = (l-1)*windowgap;
-        window_end = (l-1)*windowgap+windowsize;
+        window_stt(l) = (l-1)*windowgap+1;
+        window_end(l) = (l-1)*windowgap+windowsize;
     
-        sgtitle(sprintf('TRF Topology (JN, %d sub) and peaks %s, stim:%s, window %d - %d s\n', Snum, subjectlist, stim_tag(j), window_stt, window_end'),'interpreter', "latex")
+        sgtitle(sprintf("TRF Topology (JN, %d sub) and peaks %s, stim:%s, window %3.d - %3.d s\n", Snum, subjectlist, stim_tag(j), window_stt(l), window_end(l)'),'interpreter', "latex")
         % filename_pdf = strcat(outfolder_mTRFfig_step7, sprintf('TRFTopoJK_%s_%s_%s', refCh, subjectlist, stim_tag(j)), '.pdf');
         % exportgraphics(gcf,filename_pdf','Resolution',300)
         exportgraphics(gcf, filename_topogif, Append=true);
@@ -211,3 +217,45 @@ for j =1: numTag-1 %except mix
 end
 
 end
+
+%% crest factor
+
+CF_JK_mt = squeeze(peak2rms(mean(TRF_JK_mt(:,:,Hotch,:,:),5),1)); %calculate crestfactor (subject averaged)
+CF_JK_um = squeeze(peak2rms(mean(TRF_JK_um(:,:,Hotch,:,:),5),1));
+%index: CF_JK_mt([windows], [channel], [stimuli])
+
+% CFave_JK_mt = mean(CF_JK_mt, [2,3]);
+% CFave_JK_um = mean(CF_JK_um, [2,3]);
+
+yrange = [1, 4];
+xrange = window_stt([1, end]);
+
+figure;
+
+co = 0;
+for j =1: numStim  %except mix
+    for k = 1:numHotCh
+        co = co+1;
+        subplot(numStim, numHotCh, co)
+
+        plot(window_stt, CF_JK_mt(:,k,j)); hold on;
+        plot(window_stt, CF_JK_um(:,k,j)); 
+
+        title(sprintf("%s stim (%s)",stim_tag(j), Hotchs(k)))
+        xlim(xrange)
+        xlabel('Start point [sec]');
+        ylim(yrange);
+        ylabel('Crest Factor')
+        grid on;
+
+    end
+end
+
+legend("matched", "unmatched")
+sgtitle(sprintf('Crest Factor of Jackknifed TRF average (%d sub), d%dgap%d', Snum, windowsize, windowgap),'interpreter', "latex")
+filename_pdf = strcat(outfolder_mTRFfig_step7, sprintf('CF_TRFJKave_d%dgap%d_%s', windowsize, windowgap, subjectlist), '.pdf');
+exportgraphics(gcf,filename_pdf','Resolution',400)
+
+savefilename = sprintf(sprintf('CF_TRFJKave_%s%s_d%dgap%d.mat', namekey, experiment_name, windowsize, windowgap));
+save(savefilename, "CF_JK_mt", "CF_JK_um")
+
